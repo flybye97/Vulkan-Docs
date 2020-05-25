@@ -1,0 +1,1621 @@
+// Copyright (c) 2015-2020 Khronos Group. This work is licensed under a
+// Creative Commons Attribution 4.0 International License; see
+// http://creativecommons.org/licenses/by/4.0/
+
+[appendix]
+[[spirvenv]]
+= Vulkan Environment for SPIR-V
+
+Shaders for Vulkan are defined by the <<spirv-spec,Khronos SPIR-V
+Specification>> as well as the <<spirv-extended,Khronos SPIR-V Extended
+Instructions for GLSL>> Specification.
+This appendix defines additional SPIR-V requirements applying to Vulkan
+shaders.
+
+== Versions and Formats
+
+A Vulkan
+ifdef::VK_VERSION_1_2[]
+1.2 implementation must: support the 1.0, 1.1, 1.2, 1.3, 1.4, and 1.5
+versions
+endif::VK_VERSION_1_2[]
+ifndef::VK_VERSION_1_2[]
+ifdef::VK_VERSION_1_1[]
+1.1 implementation must: support the 1.0, 1.1, 1.2, and 1.3 versions
+endif::VK_VERSION_1_1[]
+ifndef::VK_VERSION_1_1[]
+1.0 implementation must: support the 1.0 version
+endif::VK_VERSION_1_1[]
+endif::VK_VERSION_1_2[]
+of SPIR-V and the 1.0 version of the SPIR-V Extended Instructions for GLSL.
+ifndef::VK_VERSION_1_2[]
+ifdef::VK_KHR_spirv_1_4[]
+If the `<<VK_KHR_spirv_1_4>>` extension is enabled, the implementation must:
+additionally support the 1.4 version of SPIR-V.
+endif::VK_KHR_spirv_1_4[]
+endif::VK_VERSION_1_2[]
+
+A SPIR-V module passed into flink:vkCreateShaderModule is interpreted as a
+series of 32-bit words in host endianness, with literal strings packed as
+described in section 2.2 of the SPIR-V Specification.
+The first few words of the SPIR-V module must: be a magic number and a
+SPIR-V version number, as described in section 2.3 of the SPIR-V
+Specification.
+
+
+[[spirvenv-capabilities]]
+== Capabilities
+
+The SPIR-V capabilities listed below must: be supported if the corresponding
+feature or extension is enabled, or if no features or extensions are listed
+for that capability.
+Extensions are only listed when there is not also a feature bit associated
+with that capability.
+
+[[spirvenv-capabilities-table]]
+.List of SPIR-V Capabilities and enabling features or extensions
+[options="header"]
+|====
+| SPIR-V code:OpCapability                | Vulkan feature or extension name
+
+| code:Matrix                             |
+| code:Shader                             |
+| code:InputAttachment                    |
+| code:Sampled1D                          |
+| code:Image1D                            |
+| code:SampledBuffer                      |
+| code:ImageBuffer                        |
+| code:ImageQuery                         |
+| code:DerivativeControl                  |
+| code:Geometry                           | <<features-geometryShader,pname:geometryShader>>
+| code:Tessellation                       | <<features-tessellationShader,pname:tessellationShader>>
+| code:Float64                            | <<features-shaderFloat64,pname:shaderFloat64>>
+| code:Int64                              | <<features-shaderInt64,pname:shaderInt64>>
+ifdef::VK_VERSION_1_2,VK_KHR_shader_atomic_int64[]
+[[spirvenv-capabilities-table-int64atomics]]
+| code:Int64Atomics                       | <<features-shaderBufferInt64Atomics,shaderBufferInt64Atomics>>, <<features-shaderSharedInt64Atomics,shaderSharedInt64Atomics>>
+endif::VK_VERSION_1_2,VK_KHR_shader_atomic_int64[]
+| code:Int16                              | <<features-shaderInt16,pname:shaderInt16>>
+| code:TessellationPointSize              | <<features-shaderTessellationAndGeometryPointSize,pname:shaderTessellationAndGeometryPointSize>>
+| code:GeometryPointSize                  | <<features-shaderTessellationAndGeometryPointSize,pname:shaderTessellationAndGeometryPointSize>>
+| code:ImageGatherExtended                | <<features-shaderImageGatherExtended,pname:shaderImageGatherExtended>>
+| code:StorageImageMultisample            | <<features-shaderStorageImageMultisample,pname:shaderStorageImageMultisample>>
+| code:UniformBufferArrayDynamicIndexing  | <<features-shaderUniformBufferArrayDynamicIndexing,pname:shaderUniformBufferArrayDynamicIndexing>>
+| code:SampledImageArrayDynamicIndexing   | <<features-shaderSampledImageArrayDynamicIndexing,pname:shaderSampledImageArrayDynamicIndexing>>
+| code:StorageBufferArrayDynamicIndexing  | <<features-shaderStorageBufferArrayDynamicIndexing,pname:shaderStorageBufferArrayDynamicIndexing>>
+| code:StorageImageArrayDynamicIndexing   | <<features-shaderStorageImageArrayDynamicIndexing,pname:shaderStorageImageArrayDynamicIndexing>>
+| code:ClipDistance                       | <<features-shaderClipDistance,pname:shaderClipDistance>>
+| code:CullDistance                       | <<features-shaderCullDistance,pname:shaderCullDistance>>
+| code:ImageCubeArray                     | <<features-imageCubeArray,pname:imageCubeArray>>
+| code:SampleRateShading                  | <<features-sampleRateShading,pname:sampleRateShading>>
+| code:SparseResidency                    | <<features-shaderResourceResidency,pname:shaderResourceResidency>>
+| code:MinLod                             | <<features-shaderResourceMinLod,pname:shaderResourceMinLod>>
+| code:SampledCubeArray                   | <<features-imageCubeArray,pname:imageCubeArray>>
+| code:ImageMSArray                       | <<features-shaderStorageImageMultisample,pname:shaderStorageImageMultisample>>
+| code:StorageImageExtendedFormats        |
+| code:InterpolationFunction              | <<features-sampleRateShading,pname:sampleRateShading>>
+| code:StorageImageReadWithoutFormat      | <<features-shaderStorageImageReadWithoutFormat,pname:shaderStorageImageReadWithoutFormat>>
+| code:StorageImageWriteWithoutFormat     | <<features-shaderStorageImageWriteWithoutFormat,pname:shaderStorageImageWriteWithoutFormat>>
+| code:MultiViewport                      | <<features-multiViewport,pname:multiViewport>>
+ifdef::VK_VERSION_1_1,VK_KHR_shader_draw_parameters[]
+[[spirvenv-capabilities-table-drawparameters]]
+| code:DrawParameters                     |
+ifdef::VK_VERSION_1_1[]
+<<features-shaderDrawParameters,pname:shaderDrawParameters>>
+endif::VK_VERSION_1_1[]
+ifdef::VK_VERSION_1_1+VK_KHR_shader_draw_parameters[,]
+ifdef::VK_KHR_shader_draw_parameters[]
+`<<VK_KHR_shader_draw_parameters>>`
+endif::VK_KHR_shader_draw_parameters[]
+endif::VK_VERSION_1_1,VK_KHR_shader_draw_parameters[]
+ifdef::VK_VERSION_1_1,VK_KHR_multiview[]
+[[spirvenv-capabilities-multiview]]
+| code:MultiView                          |
+ifndef::VK_VERSION_1_1[]
+`<<VK_KHR_multiview>>`
+endif::VK_VERSION_1_1[]
+endif::VK_VERSION_1_1,VK_KHR_multiview[]
+ifdef::VK_VERSION_1_1,VK_KHR_device_group[]
+| code:DeviceGroup                        |
+ifndef::VK_VERSION_1_1[]
+`<<VK_KHR_device_group>>`
+endif::VK_VERSION_1_1[]
+endif::VK_VERSION_1_1,VK_KHR_device_group[]
+ifdef::VK_VERSION_1_1,VK_KHR_variable_pointers[]
+[[spirvenv-capabilities-table-variablepointers]]
+| code:VariablePointersStorageBuffer      | <<features-variablePointersStorageBuffer,pname:variablePointersStorageBuffer>>
+| code:VariablePointers                   | <<features-variablePointers,pname:variablePointers>>
+endif::VK_VERSION_1_1,VK_KHR_variable_pointers[]
+ifdef::VK_KHR_shader_clock[]
+[[spirvenv-capabilities-table-shaderclock]]
+| code:ShaderClockKHR             | `<<VK_KHR_shader_clock>>`
+endif::VK_KHR_shader_clock[]
+ifdef::VK_EXT_shader_stencil_export[]
+[[spirvenv-capabilities-table-shaderstencilexportext]]
+| code:StencilExportEXT                   | `<<VK_EXT_shader_stencil_export>>`
+endif::VK_EXT_shader_stencil_export[]
+ifdef::VK_EXT_shader_subgroup_ballot[]
+[[spirvenv-capabilities-table-subgroupballot]]
+| code:SubgroupBallotKHR                  | `<<VK_EXT_shader_subgroup_ballot>>`
+endif::VK_EXT_shader_subgroup_ballot[]
+ifdef::VK_EXT_shader_subgroup_vote[]
+[[spirvenv-capabilities-table-subgroupvote]]
+| code:SubgroupVoteKHR                    | `<<VK_EXT_shader_subgroup_vote>>`
+endif::VK_EXT_shader_subgroup_vote[]
+ifdef::VK_AMD_shader_image_load_store_lod[]
+[[spirvenv-capabilities-table-imagereadwritelodamd]]
+| code:ImageReadWriteLodAMD               | `<<VK_AMD_shader_image_load_store_lod>>`
+endif::VK_AMD_shader_image_load_store_lod[]
+ifdef::VK_AMD_texture_gather_bias_lod[]
+[[spirvenv-capabilities-table-imagegatherbiaslodamd]]
+| code:ImageGatherBiasLodAMD              | `<<VK_AMD_texture_gather_bias_lod>>`
+endif::VK_AMD_texture_gather_bias_lod[]
+ifdef::VK_AMD_shader_fragment_mask[]
+[[spirvenv-capabilities-table-fragmentmaskamd]]
+| code:FragmentMaskAMD                    | `<<VK_AMD_shader_fragment_mask>>`
+endif::VK_AMD_shader_fragment_mask[]
+ifdef::VK_NV_sample_mask_override_coverage[]
+[[spirvenv-capabilities-table-samplemaskoverridecoverage]]
+| code:SampleMaskOverrideCoverageNV       | `<<VK_NV_sample_mask_override_coverage>>`
+endif::VK_NV_sample_mask_override_coverage[]
+ifdef::VK_NV_geometry_shader_passthrough[]
+[[spirvenv-capabilities-table-geometryshaderpassthrough]]
+| code:GeometryShaderPassthroughNV        | `<<VK_NV_geometry_shader_passthrough>>`
+endif::VK_NV_geometry_shader_passthrough[]
+ifdef::VK_VERSION_1_2[]
+[[spirvenv-capabilities-table-shader-viewport-index]]
+| code:ShaderViewportIndex                | <<features-shaderOutputViewportIndex,shaderOutputViewportIndex>>
+[[spirvenv-capabilities-table-shader-layer]]
+| code:ShaderLayer                        | <<features-shaderOutputLayer,shaderOutputLayer>>
+endif::VK_VERSION_1_2[]
+ifdef::VK_EXT_shader_viewport_index_layer[]
+[[spirvenv-capabilities-table-shader-viewport-index-layer]]
+| code:ShaderViewportIndexLayerEXT        | `<<VK_EXT_shader_viewport_index_layer>>`
+endif::VK_EXT_shader_viewport_index_layer[]
+ifdef::VK_NV_viewport_array2[]
+[[spirvenv-capabilities-table-viewportarray2]]
+| code:ShaderViewportIndexLayerNV         | `<<VK_NV_viewport_array2>>`
+| code:ShaderViewportMaskNV               | `<<VK_NV_viewport_array2>>`
+endif::VK_NV_viewport_array2[]
+ifdef::VK_NVX_multiview_per_view_attributes[]
+[[spirvenv-capabilities-table-perviewattributes]]
+| code:PerViewAttributesNV                | `<<VK_NVX_multiview_per_view_attributes>>`
+endif::VK_NVX_multiview_per_view_attributes[]
+ifdef::VK_VERSION_1_1,VK_KHR_16bit_storage[]
+[[spirvenv-capabilities-table-16bitstorage]]
+| code:StorageBuffer16BitAccess           | <<features-storageBuffer16BitAccess,pname:StorageBuffer16BitAccess>>
+| code:UniformAndStorageBuffer16BitAccess | <<features-uniformAndStorageBuffer16BitAccess,pname:UniformAndStorageBuffer16BitAccess>>
+| code:StoragePushConstant16              | <<features-storagePushConstant16,pname:storagePushConstant16>>
+| code:StorageInputOutput16               | <<features-storageInputOutput16,pname:storageInputOutput16>>
+endif::VK_VERSION_1_1,VK_KHR_16bit_storage[]
+ifdef::VK_VERSION_1_1[]
+[[spirvenv-capabilities-table-subgroup]]
+| code:GroupNonUniform                    | <<features-subgroup-basic,ename:VK_SUBGROUP_FEATURE_BASIC_BIT>>
+| code:GroupNonUniformVote                | <<features-subgroup-vote,ename:VK_SUBGROUP_FEATURE_VOTE_BIT>>
+| code:GroupNonUniformArithmetic          | <<features-subgroup-arithmetic,ename:VK_SUBGROUP_FEATURE_ARITHMETIC_BIT>>
+| code:GroupNonUniformBallot              | <<features-subgroup-ballot,ename:VK_SUBGROUP_FEATURE_BALLOT_BIT>>
+| code:GroupNonUniformShuffle             | <<features-subgroup-shuffle,ename:VK_SUBGROUP_FEATURE_SHUFFLE_BIT>>
+| code:GroupNonUniformShuffleRelative     | <<features-subgroup-shuffle-relative,ename:VK_SUBGROUP_FEATURE_SHUFFLE_RELATIVE_BIT>>
+| code:GroupNonUniformClustered           | <<features-subgroup-clustered,ename:VK_SUBGROUP_FEATURE_CLUSTERED_BIT>>
+| code:GroupNonUniformQuad                | <<features-subgroup-quad,ename:VK_SUBGROUP_FEATURE_QUAD_BIT>>
+ifdef::VK_NV_shader_subgroup_partitioned[]
+| code:GroupNonUniformPartitionedNV       | <<features-subgroup-partitioned,ename:VK_SUBGROUP_FEATURE_PARTITIONED_BIT_NV>>
+endif::VK_NV_shader_subgroup_partitioned[]
+endif::VK_VERSION_1_1[]
+ifdef::VK_EXT_post_depth_coverage[]
+[[spirvenv-capabilities-table-postdepthcoverage]]
+| code:SampleMaskPostDepthCoverage        | `<<VK_EXT_post_depth_coverage>>`
+endif::VK_EXT_post_depth_coverage[]
+ifdef::VK_VERSION_1_2,VK_EXT_descriptor_indexing[]
+[[spirvenv-capabilities-table-descriptorindexing]]
+ifdef::VK_VERSION_1_2[]
+| code:ShaderNonUniform                   |
+endif::VK_VERSION_1_2[]
+ifdef::VK_EXT_descriptor_indexing[]
+| code:ShaderNonUniformEXT                | `<<VK_EXT_descriptor_indexing>>`
+endif::VK_EXT_descriptor_indexing[]
+| code:RuntimeDescriptorArray                | <<features-runtimeDescriptorArray,pname:runtimeDescriptorArray>>
+| code:InputAttachmentArrayDynamicIndexing    | <<features-shaderInputAttachmentArrayDynamicIndexing,pname:shaderInputAttachmentArrayDynamicIndexing>>
+| code:UniformTexelBufferArrayDynamicIndexing    | <<features-shaderUniformTexelBufferArrayDynamicIndexing,pname:shaderUniformTexelBufferArrayDynamicIndexing>>
+| code:StorageTexelBufferArrayDynamicIndexing    | <<features-shaderStorageTexelBufferArrayDynamicIndexing,pname:shaderStorageTexelBufferArrayDynamicIndexing>>
+| code:UniformBufferArrayNonUniformIndexing    | <<features-shaderUniformBufferArrayNonUniformIndexing,pname:shaderUniformBufferArrayNonUniformIndexing>>
+| code:SampledImageArrayNonUniformIndexing    | <<features-shaderSampledImageArrayNonUniformIndexing,pname:shaderSampledImageArrayNonUniformIndexing>>
+| code:StorageBufferArrayNonUniformIndexing    | <<features-shaderStorageBufferArrayNonUniformIndexing,pname:shaderStorageBufferArrayNonUniformIndexing>>
+| code:StorageImageArrayNonUniformIndexing    | <<features-shaderStorageImageArrayNonUniformIndexing,pname:shaderStorageImageArrayNonUniformIndexing>>
+| code:InputAttachmentArrayNonUniformIndexing    | <<features-shaderInputAttachmentArrayNonUniformIndexing,pname:shaderInputAttachmentArrayNonUniformIndexing>>
+| code:UniformTexelBufferArrayNonUniformIndexing    | <<features-shaderUniformTexelBufferArrayNonUniformIndexing,pname:shaderUniformTexelBufferArrayNonUniformIndexing>>
+| code:StorageTexelBufferArrayNonUniformIndexing    | <<features-shaderStorageTexelBufferArrayNonUniformIndexing,pname:shaderStorageTexelBufferArrayNonUniformIndexing>>
+endif::VK_VERSION_1_2,VK_EXT_descriptor_indexing[]
+ifdef::VK_VERSION_1_2,VK_KHR_shader_float16_int8,VK_AMD_gpu_shader_half_float[]
+| code:Float16                            |
+ifdef::VK_VERSION_1_2,VK_KHR_shader_float16_int8[]
+                                            <<features-shaderFloat16,pname:shaderFloat16>>
+endif::VK_VERSION_1_2,VK_KHR_shader_float16_int8[]
+// Jon: logic isn't quite right for VK_VERSION_1_2, should be (1_2 or
+// f16_i8) and half_float
+ifdef::VK_KHR_shader_float16_int8+VK_AMD_gpu_shader_half_float[,]
+ifdef::VK_AMD_gpu_shader_half_float[]
+ifdef::VK_VERSION_1_2,VK_KHR_shader_float16_int8[or]
+                                            `<<VK_AMD_gpu_shader_half_float>>`
+endif::VK_AMD_gpu_shader_half_float[]
+endif::VK_VERSION_1_2,VK_KHR_shader_float16_int8,VK_AMD_gpu_shader_half_float[]
+ifdef::VK_VERSION_1_2,VK_KHR_shader_float16_int8[]
+| code:Int8                               | <<features-shaderInt8,pname:shaderInt8>>
+endif::VK_VERSION_1_2,VK_KHR_shader_float16_int8[]
+ifdef::VK_VERSION_1_2,VK_KHR_8bit_storage[]
+[[spirvenv-capabilities-table-8bitstorage]]
+| code:StorageBuffer8BitAccess            | <<features-storageBuffer8BitAccess,pname:StorageBuffer8BitAccess>>
+| code:UniformAndStorageBuffer8BitAccess  | <<features-uniformAndStorageBuffer8BitAccess,pname:UniformAndStorageBuffer8BitAccess>>
+| code:StoragePushConstant8               | <<features-storagePushConstant8,pname:StoragePushConstant8>>
+endif::VK_VERSION_1_2,VK_KHR_8bit_storage[]
+ifdef::VK_VERSION_1_2,VK_KHR_vulkan_memory_model[]
+[[spirvenv-capabilities-table-memorymodel]]
+| code:VulkanMemoryModel                  | <<features-vulkanMemoryModel,pname:vulkanMemoryModel>>
+| code:VulkanMemoryModelDeviceScope       | <<features-vulkanMemoryModel,pname:vulkanMemoryModelDeviceScope>>
+endif::VK_VERSION_1_2,VK_KHR_vulkan_memory_model[]
+ifdef::VK_VERSION_1_2,VK_KHR_shader_float_controls[]
+[[spirvenv-capabilities-table-shaderfloatcontrols]]
+| code:DenormPreserve            | <<features-shaderDenormPreserveFloat16,pname:shaderDenormPreserveFloat16>>, <<features-shaderDenormPreserveFloat32,pname:shaderDenormPreserveFloat32>>, <<features-shaderDenormPreserveFloat64,pname:shaderDenormPreserveFloat64>>
+| code:DenormFlushToZero         | <<features-shaderDenormFlushToZeroFloat16,pname:shaderDenormFlushToZeroFloat16>>, <<features-shaderDenormFlushToZeroFloat32,pname:shaderDenormFlushToZeroFloat32>>, <<features-shaderDenormFlushToZeroFloat64,pname:shaderDenormFlushToZeroFloat64>>
+| code:SignedZeroInfNanPreserve  | <<features-shaderSignedZeroInfNanPreserveFloat16,pname:shaderSignedZeroInfNanPreserveFloat16>>, <<features-shaderSignedZeroInfNanPreserveFloat32,pname:shaderSignedZeroInfNanPreserveFloat32>>, <<features-shaderSignedZeroInfNanPreserveFloat64,pname:shaderSignedZeroInfNanPreserveFloat64>>
+| code:RoundingModeRTE           | <<features-shaderRoundingModeRTEFloat16,pname:shaderRoundingModeRTEFloat16>>, <<features-shaderRoundingModeRTEFloat32,pname:shaderRoundingModeRTEFloat32>>, <<features-shaderRoundingModeRTEFloat64,pname:shaderRoundingModeRTEFloat64>>
+| code:RoundingModeRTZ           | <<features-shaderRoundingModeRTZFloat16,pname:shaderRoundingModeRTZFloat16>>, <<features-shaderRoundingModeRTZFloat32,pname:shaderRoundingModeRTZFloat32>>, <<features-shaderRoundingModeRTZFloat64,pname:shaderRoundingModeRTZFloat64>>
+endif::VK_VERSION_1_2,VK_KHR_shader_float_controls[]
+ifdef::VK_NV_compute_shader_derivatives[]
+[[spirvenv-capabilities-table-computederivatives-quads]]
+| code:ComputeDerivativeGroupQuadsNV      | <<features-computeShaderDerivativesQuads,pname:computeDerivativeGroupQuads>>
+[[spirvenv-capabilities-table-computederivatives-linear]]
+| code:ComputeDerivativeGroupLinearNV     | <<features-computeShaderDerivativesLinear,pname:computeDerivativeGroupLinear>>
+endif::VK_NV_compute_shader_derivatives[]
+ifdef::VK_NV_fragment_shader_barycentric[]
+[[spirvenv-capabilities-fragment-barycentric]]
+| code:FragmentBarycentricNV              | <<features-fragmentShaderBarycentric,pname:fragmentShaderBarycentric>>
+endif::VK_NV_fragment_shader_barycentric[]
+ifdef::VK_NV_shader_image_footprint[]
+[[spirvenv-capabilities-table-imagefootprint]]
+| code:ImageFootprintNV                   | <<features-imageFootprint,pname:imageFootprint>>
+endif::VK_NV_shader_image_footprint[]
+ifdef::VK_NV_shading_rate_image[]
+| code:ShadingRateImageNV | <<features-shadingRateImage,pname:shadingRateImage>>
+endif::VK_NV_shading_rate_image[]
+ifdef::VK_NV_mesh_shader[]
+[[spirvenv-capabilities-table-meshshading]]
+| code:MeshShadingNV                      | `<<VK_NV_mesh_shader>>`
+endif::VK_NV_mesh_shader[]
+ifdef::VK_KHR_ray_tracing[]
+[[spirvenv-capabilities-table-khr-raytracing]]
+| code:RayTracingProvisionalKHR                   | <<features-raytracing, rayTracing>>
+| code:RayQueryProvisionalKHR                     | <<features-rayQuery, rayQuery>>
+| code:RayTraversalPrimitiveCullingProvisionalKHR | <<features-rayTracingPrimitiveCulling, rayTracingPrimitiveCulling>>
+endif::VK_KHR_ray_tracing[]
+ifdef::VK_NV_ray_tracing[]
+[[spirvenv-capabilities-table-nv-raytracing]]
+| code:RayTracingNV                       | `<<VK_NV_ray_tracing>>`
+endif::VK_NV_ray_tracing[]
+ifdef::VK_EXT_transform_feedback[]
+| code:TransformFeedback                  | <<features-transformFeedback,pname:transformFeedback>>
+| code:GeometryStreams                    | <<features-geometryStreams,pname:geometryStreams>>
+endif::VK_EXT_transform_feedback[]
+ifdef::VK_EXT_fragment_density_map[]
+[[spirvenv-capabilities-table-fragmentdensity]]
+| code:FragmentDensityEXT                 | <<features-fragmentdensitymap,pname:fragmentDensityMap>>
+endif::VK_EXT_fragment_density_map[]
+ifdef::VK_VERSION_1_2,VK_EXT_buffer_device_address,VK_KHR_buffer_device_address[]
+[[spirvenv-capabilities-table-physicalstoragebufferaddresses]]
+| code:PhysicalStorageBufferAddresses     |
+ifdef::VK_VERSION_1_2,VK_KHR_buffer_device_address[]
+<<features-bufferDeviceAddress,bufferDeviceAddress>>
+endif::VK_VERSION_1_2,VK_KHR_buffer_device_address[]
+ifdef::VK_VERSION_1_2,VK_EXT_buffer_device_address+VK_KHR_buffer_device_address[,]
+ifdef::VK_EXT_buffer_device_address[]
+<<features-bufferDeviceAddressEXT,sname:VkPhysicalDeviceBufferDeviceAddressFeaturesEXT::pname:bufferDeviceAddress>>
+endif::VK_EXT_buffer_device_address[]
+endif::VK_VERSION_1_2,VK_EXT_buffer_device_address,VK_KHR_buffer_device_address[]
+ifdef::VK_NV_cooperative_matrix[]
+[[spirvenv-capabilities-table-cooperativeMatrix]]
+| code:CooperativeMatrixNV  | <<features-cooperativeMatrix,pname:cooperativeMatrix>>
+endif::VK_NV_cooperative_matrix[]
+ifdef::VK_INTEL_shader_integer_functions2[]
+[[spirvenv-capabilities-table-shaderIntegerFunctions2]]
+| code:ShaderIntegerFunctions2INTEL  | <<features-shaderIntegerFunctions2,pname:shaderIntegerFunctions2>>
+endif::VK_INTEL_shader_integer_functions2[]
+ifdef::VK_NV_shader_sm_builtins[]
+[[spirvenv-capabilities-table-shadersmbuiltins]]
+| code:ShaderSMBuiltinsNV    | <<features-shadersmbuiltins,pname:shaderSMBuiltins>>
+endif::VK_NV_shader_sm_builtins[]
+ifdef::VK_EXT_fragment_shader_interlock[]
+[[spirvenv-capabilities-table-fragmentShaderInterlock]]
+| code:FragmentShaderSampleInterlockEXT  | <<features-fragmentShaderSampleInterlock,pname:fragmentShaderSampleInterlock>>
+| code:FragmentShaderPixelInterlockEXT  | <<features-fragmentShaderPixelInterlock,pname:fragmentShaderPixelInterlock>>
+ifdef::VK_NV_shading_rate_image[]
+| code:FragmentShaderShadingRateInterlockEXT  | <<features-fragmentShaderShadingRateInterlock,pname:fragmentShaderShadingRateInterlock>>, <<features-shadingRateImage,shadingRateImage>>
+endif::VK_NV_shading_rate_image[]
+endif::VK_EXT_fragment_shader_interlock[]
+ifdef::VK_EXT_shader_demote_to_helper_invocation[]
+[[spirvenv-capabilities-table-demote]]
+| code:DemoteToHelperInvocationEXT    | <<features-shaderDemoteToHelperInvocation,pname:shaderDemoteToHelperInvocation>>
+endif::VK_EXT_shader_demote_to_helper_invocation[]
+|====
+
+ifdef::VK_VERSION_1_1,VK_KHR_variable_pointers[]
+The application can: pass a SPIR-V module to flink:vkCreateShaderModule that
+uses the `SPV_KHR_variable_pointers` SPIR-V extension.
+endif::VK_VERSION_1_1,VK_KHR_variable_pointers[]
+
+ifdef::VK_AMD_shader_explicit_vertex_parameter[]
+The application can: pass a SPIR-V module to flink:vkCreateShaderModule that
+uses the `SPV_AMD_shader_explicit_vertex_parameter` SPIR-V extension.
+endif::VK_AMD_shader_explicit_vertex_parameter[]
+
+ifdef::VK_AMD_gcn_shader[]
+The application can: pass a SPIR-V module to flink:vkCreateShaderModule that
+uses the `SPV_AMD_gcn_shader` SPIR-V extension.
+endif::VK_AMD_gcn_shader[]
+
+ifdef::VK_AMD_gpu_shader_half_float[]
+The application can: pass a SPIR-V module to flink:vkCreateShaderModule that
+uses the `SPV_AMD_gpu_shader_half_float` SPIR-V extension.
+endif::VK_AMD_gpu_shader_half_float[]
+
+ifdef::VK_AMD_gpu_shader_int16[]
+The application can: pass a SPIR-V module to flink:vkCreateShaderModule that
+uses the `SPV_AMD_gpu_shader_int16` SPIR-V extension.
+endif::VK_AMD_gpu_shader_int16[]
+
+ifdef::VK_AMD_shader_ballot[]
+The application can: pass a SPIR-V module to flink:vkCreateShaderModule that
+uses the `SPV_AMD_shader_ballot` SPIR-V extension.
+endif::VK_AMD_shader_ballot[]
+
+ifdef::VK_AMD_shader_fragment_mask[]
+The application can: pass a SPIR-V module to flink:vkCreateShaderModule that
+uses the `SPV_AMD_shader_fragment_mask` SPIR-V extension.
+endif::VK_AMD_shader_fragment_mask[]
+
+ifdef::VK_AMD_shader_image_load_store_lod[]
+The application can: pass a SPIR-V module to flink:vkCreateShaderModule that
+uses the `SPV_AMD_shader_image_load_store_lod` SPIR-V extension.
+endif::VK_AMD_shader_image_load_store_lod[]
+
+ifdef::VK_AMD_shader_trinary_minmax[]
+The application can: pass a SPIR-V module to flink:vkCreateShaderModule that
+uses the `SPV_AMD_shader_trinary_minmax` SPIR-V extension.
+endif::VK_AMD_shader_trinary_minmax[]
+
+ifdef::VK_AMD_texture_gather_bias_lod[]
+The application can: pass a SPIR-V module to flink:vkCreateShaderModule that
+uses the `SPV_AMD_texture_gather_bias_lod` SPIR-V extension.
+endif::VK_AMD_texture_gather_bias_lod[]
+
+ifdef::VK_VERSION_1_1,VK_KHR_shader_draw_parameters[]
+The application can: pass a SPIR-V module to flink:vkCreateShaderModule that
+uses the `SPV_KHR_shader_draw_parameters` SPIR-V extension.
+endif::VK_VERSION_1_1,VK_KHR_shader_draw_parameters[]
+
+ifdef::VK_VERSION_1_2,VK_KHR_8bit_storage[]
+The application can: pass a SPIR-V module to flink:vkCreateShaderModule that
+uses the `SPV_KHR_8bit_storage` SPIR-V extension.
+endif::VK_VERSION_1_2,VK_KHR_8bit_storage[]
+
+ifdef::VK_VERSION_1_1,VK_KHR_16bit_storage[]
+The application can: pass a SPIR-V module to flink:vkCreateShaderModule that
+uses the `SPV_KHR_16bit_storage` SPIR-V extension.
+endif::VK_VERSION_1_1,VK_KHR_16bit_storage[]
+
+ifdef::VK_KHR_shader_clock[]
+The application can: pass a SPIR-V module to flink:vkCreateShaderModule that
+uses the {spirv}/KHR/SPV_KHR_shader_clock.html[`SPV_KHR_shader_clock`]
+SPIR-V extension.
+endif::VK_KHR_shader_clock[]
+
+ifdef::VK_VERSION_1_2,VK_KHR_shader_float_controls[]
+The application can: pass a SPIR-V module to flink:vkCreateShaderModule that
+uses the `SPV_KHR_float_controls` SPIR-V extension.
+endif::VK_VERSION_1_2,VK_KHR_shader_float_controls[]
+
+ifdef::VK_VERSION_1_1,VK_KHR_storage_buffer_storage_class[]
+The application can: pass a SPIR-V module to flink:vkCreateShaderModule that
+uses the `SPV_KHR_storage_buffer_storage_class` SPIR-V extension.
+endif::VK_VERSION_1_1,VK_KHR_storage_buffer_storage_class[]
+
+ifdef::VK_EXT_post_depth_coverage[]
+The application can: pass a SPIR-V module to flink:vkCreateShaderModule that
+uses the `SPV_KHR_post_depth_coverage` SPIR-V extension.
+endif::VK_EXT_post_depth_coverage[]
+
+ifdef::VK_EXT_shader_stencil_export[]
+The application can: pass a SPIR-V module to flink:vkCreateShaderModule that
+uses the `SPV_EXT_shader_stencil_export` SPIR-V extension.
+endif::VK_EXT_shader_stencil_export[]
+
+ifdef::VK_EXT_shader_subgroup_ballot[]
+The application can: pass a SPIR-V module to flink:vkCreateShaderModule that
+uses the `SPV_KHR_shader_ballot` SPIR-V extension.
+endif::VK_EXT_shader_subgroup_ballot[]
+
+ifdef::VK_EXT_shader_subgroup_vote[]
+The application can: pass a SPIR-V module to flink:vkCreateShaderModule that
+uses the `SPV_KHR_subgroup_vote` SPIR-V extension.
+endif::VK_EXT_shader_subgroup_vote[]
+
+ifdef::VK_NV_sample_mask_override_coverage[]
+The application can: pass a SPIR-V module to flink:vkCreateShaderModule that
+uses the `SPV_NV_sample_mask_override_coverage` SPIR-V extension.
+endif::VK_NV_sample_mask_override_coverage[]
+
+ifdef::VK_NV_geometry_shader_passthrough[]
+The application can: pass a SPIR-V module to flink:vkCreateShaderModule that
+uses the `SPV_NV_geometry_shader_passthrough` SPIR-V extension.
+endif::VK_NV_geometry_shader_passthrough[]
+
+ifdef::VK_NV_mesh_shader[]
+The application can: pass a SPIR-V module to flink:vkCreateShaderModule that
+uses the `SPV_NV_mesh_shader` SPIR-V extension.
+endif::VK_NV_mesh_shader[]
+
+ifdef::VK_NV_viewport_array2[]
+The application can: pass a SPIR-V module to flink:vkCreateShaderModule that
+uses the `SPV_NV_viewport_array2` SPIR-V extension.
+endif::VK_NV_viewport_array2[]
+
+ifdef::VK_NV_shader_subgroup_partitioned[]
+The application can: pass a SPIR-V module to flink:vkCreateShaderModule that
+uses the `SPV_NV_shader_subgroup_partitioned` SPIR-V extension.
+endif::VK_NV_shader_subgroup_partitioned[]
+
+ifdef::VK_VERSION_1_2,VK_EXT_shader_viewport_index_layer[]
+The application can: pass a SPIR-V module to flink:vkCreateShaderModule that
+uses the `SPV_EXT_shader_viewport_index_layer` SPIR-V extension.
+endif::VK_VERSION_1_2,VK_EXT_shader_viewport_index_layer[]
+
+ifdef::VK_NVX_multiview_per_view_attributes[]
+The application can: pass a SPIR-V module to flink:vkCreateShaderModule that
+uses the `SPV_NVX_multiview_per_view_attributes` SPIR-V extension.
+endif::VK_NVX_multiview_per_view_attributes[]
+
+ifdef::VK_VERSION_1_2,VK_EXT_descriptor_indexing[]
+The application can: pass a SPIR-V module to flink:vkCreateShaderModule that
+uses the `SPV_EXT_descriptor_indexing` SPIR-V extension.
+endif::VK_VERSION_1_2,VK_EXT_descriptor_indexing[]
+
+ifdef::VK_VERSION_1_2,VK_KHR_vulkan_memory_model[]
+The application can: pass a SPIR-V module to flink:vkCreateShaderModule that
+uses the `SPV_KHR_vulkan_memory_model` SPIR-V extension.
+endif::VK_VERSION_1_2,VK_KHR_vulkan_memory_model[]
+
+ifdef::VK_NV_compute_shader_derivatives[]
+The application can: pass a SPIR-V module to flink:vkCreateShaderModule that
+uses the `SPV_NV_compute_shader_derivatives` SPIR-V extension.
+endif::VK_NV_compute_shader_derivatives[]
+
+ifdef::VK_NV_fragment_shader_barycentric[]
+The application can: pass a SPIR-V module to flink:vkCreateShaderModule that
+uses the `SPV_NV_fragment_shader_barycentric` SPIR-V extension.
+endif::VK_NV_fragment_shader_barycentric[]
+
+ifdef::VK_NV_shader_image_footprint[]
+The application can: pass a SPIR-V module to flink:vkCreateShaderModule that
+uses the `SPV_NV_shader_image_footprint` SPIR-V extension.
+endif::VK_NV_shader_image_footprint[]
+
+ifdef::VK_NV_shading_rate_image[]
+The application can: pass a SPIR-V module to flink:vkCreateShaderModule that
+uses the `SPV_NV_shading_rate` SPIR-V extension.
+endif::VK_NV_shading_rate_image[]
+
+ifdef::VK_NV_ray_tracing[]
+The application can: pass a SPIR-V module to flink:vkCreateShaderModule that
+uses the `SPV_NV_ray_tracing` SPIR-V extension.
+endif::VK_NV_ray_tracing[]
+
+ifdef::VK_KHR_ray_tracing[]
+The application can: pass a SPIR-V module to flink:vkCreateShaderModule that
+uses the `SPV_KHR_ray_tracing` SPIR-V extension.
+endif::VK_KHR_ray_tracing[]
+
+ifdef::VK_KHR_ray_tracing[]
+The application can: pass a SPIR-V module to flink:vkCreateShaderModule that
+uses the `SPV_KHR_ray_query` SPIR-V extension.
+endif::VK_KHR_ray_tracing[]
+
+ifdef::VK_GOOGLE_hlsl_functionality1[]
+The application can: pass a SPIR-V module to flink:vkCreateShaderModule that
+uses the `SPV_GOOGLE_hlsl_functionality1` SPIR-V extension.
+endif::VK_GOOGLE_hlsl_functionality1[]
+
+ifdef::VK_GOOGLE_user_type[]
+The application can: pass a SPIR-V module to flink:vkCreateShaderModule that
+uses the `SPV_GOOGLE_user_type` SPIR-V extension.
+endif::VK_GOOGLE_user_type[]
+
+ifdef::VK_GOOGLE_decorate_string[]
+The application can: pass a SPIR-V module to flink:vkCreateShaderModule that
+uses the `SPV_GOOGLE_decorate_string` SPIR-V extension.
+endif::VK_GOOGLE_decorate_string[]
+
+ifdef::VK_EXT_fragment_density_map[]
+The application can: pass a SPIR-V module to flink:vkCreateShaderModule that
+uses the `SPV_EXT_fragment_invocation_density` SPIR-V extension.
+endif::VK_EXT_fragment_density_map[]
+
+ifdef::VK_VERSION_1_2,VK_KHR_buffer_device_address[]
+The application can: pass a SPIR-V module to flink:vkCreateShaderModule that
+uses the `SPV_KHR_physical_storage_buffer` SPIR-V extension.
+endif::VK_VERSION_1_2,VK_KHR_buffer_device_address[]
+
+ifdef::VK_EXT_buffer_device_address[]
+The application can: pass a SPIR-V module to flink:vkCreateShaderModule that
+uses the `SPV_EXT_physical_storage_buffer` SPIR-V extension.
+endif::VK_EXT_buffer_device_address[]
+
+ifdef::VK_NV_cooperative_matrix[]
+The application can: pass a SPIR-V module to flink:vkCreateShaderModule that
+uses the `SPV_NV_cooperative_matrix` SPIR-V extension.
+endif::VK_NV_cooperative_matrix[]
+
+ifdef::VK_NV_shader_sm_builtins[]
+The application can: pass a SPIR-V module to flink:vkCreateShaderModule that
+uses the `SPV_NV_shader_sm_builtins` SPIR-V extension.
+endif::VK_NV_shader_sm_builtins[]
+
+ifdef::VK_EXT_fragment_shader_interlock[]
+The application can: pass a SPIR-V module to flink:vkCreateShaderModule that
+uses the `SPV_EXT_fragment_shader_interlock` SPIR-V extension.
+endif::VK_EXT_fragment_shader_interlock[]
+
+ifdef::VK_EXT_shader_demote_to_helper_invocation[]
+The application can: pass a SPIR-V module to flink:vkCreateShaderModule that
+uses the `SPV_EXT_demote_to_helper_invocation` SPIR-V extension.
+endif::VK_EXT_shader_demote_to_helper_invocation[]
+
+ifdef::VK_KHR_shader_non_semantic_info[]
+The application can: pass a SPIR-V module to flink:vkCreateShaderModule that
+uses the `SPV_KHR_non_semantic_info` SPIR-V extension.
+endif::VK_KHR_shader_non_semantic_info[]
+
+The application must: not pass a SPIR-V module containing any of the
+following to flink:vkCreateShaderModule:
+
+  * any code:OpCapability not listed above,
+  * an unsupported capability, or
+  * a capability which corresponds to a Vulkan feature or extension which
+    has not been enabled.
+
+
+[[spirvenv-module-validation]]
+== Validation Rules within a Module
+
+A SPIR-V module passed to flink:vkCreateShaderModule must: conform to the
+following rules:
+
+  * Every entry point must: have no return value and accept no arguments.
+  * Recursion: The static function-call graph for an entry point must: not
+    contain cycles.
+  * The *Logical*
+ifdef::VK_VERSION_1_2,VK_EXT_buffer_device_address,VK_KHR_buffer_device_address[]
+    or *PhysicalStorageBuffer64*
+endif::VK_VERSION_1_2,VK_EXT_buffer_device_address,VK_KHR_buffer_device_address[]
+    addressing model must: be selected.
+  * *Scope* for execution must: be limited to:
+  ** *Workgroup*
+  *** The *Workgroup* scope must: only be used in the
+ifdef::VK_NV_mesh_shader[]
+      task, mesh,
+endif::VK_NV_mesh_shader[]
+      tessellation control, and compute execution models.
+  ** *Subgroup*
+  * *Scope* for memory must: be limited to:
+  ** *Device*
+ifdef::VK_VERSION_1_2,VK_KHR_vulkan_memory_model[]
+  *** If <<features-vulkanMemoryModel,pname:vulkanMemoryModel>> is enabled
+      and
+      <<features-vulkanMemoryModelDeviceScope,pname:vulkanMemoryModelDeviceScope>>
+      is not enabled, *Device* scope must: not be used.
+  *** If <<features-vulkanMemoryModel,pname:vulkanMemoryModel>> is not
+      enabled, *Device* scope only extends to the queue family, not the
+      whole device.
+endif::VK_VERSION_1_2,VK_KHR_vulkan_memory_model[]
+ifndef::VK_VERSION_1_2,VK_KHR_vulkan_memory_model[]
+  *** *Device* scope only extends to the queue family, not the whole device.
+endif::VK_VERSION_1_2,VK_KHR_vulkan_memory_model[]
+ifdef::VK_VERSION_1_2,VK_KHR_vulkan_memory_model[]
+  ** *QueueFamily*
+  *** If <<features-vulkanMemoryModel,pname:vulkanMemoryModel>> is not
+      enabled, *QueueFamily* must: not be used.
+endif::VK_VERSION_1_2,VK_KHR_vulkan_memory_model[]
+  ** *Workgroup*
+  *** The *WorkGroup* scope must: only be used in the
+ifdef::VK_NV_mesh_shader[]
+      task, mesh, and
+endif::VK_NV_mesh_shader[]
+      compute execution model(s).
+ifdef::VK_KHR_ray_tracing[]
+  ** *ShaderCallKHR*
+  *** The *ShaderCallKHR* scope must: only be used in the ray generation,
+      intersection, closest hit, any-hit, miss, and callable execution
+      models.
+endif::VK_KHR_ray_tracing[]
+ifdef::VK_VERSION_1_1[]
+  ** *Subgroup*
+endif::VK_VERSION_1_1[]
+  ** *Invocation*
+ifdef::VK_VERSION_1_1[]
+  * *Scope* for *Non Uniform Group Operations* must: be limited to:
+  ** *Subgroup*
+endif::VK_VERSION_1_1[]
+  * *Storage Class* must: be limited to:
+  ** *UniformConstant*
+  ** *Input*
+  ** *Uniform*
+  ** *Output*
+ifdef::VK_KHR_ray_tracing,VK_NV_ray_tracing[]
+  *** The *Output* storage class must: not be used in the
+      *RayGenerationKHR*, *IntersectionKHR*, *AnyHitKHR*, *ClosestHitKHR*,
+      *MissKHR*, or *CallableKHR* execution models.
+endif::VK_KHR_ray_tracing,VK_NV_ray_tracing[]
+  ** *Workgroup*
+  *** The *Workgroup* storage class must: only be used in the
+ifdef::VK_NV_mesh_shader[]
+      task, mesh, and
+endif::VK_NV_mesh_shader[]
+      compute execution model(s).
+  ** *Private*
+  ** *Function*
+  ** *PushConstant*
+  ** *Image*
+ifdef::VK_VERSION_1_1,VK_KHR_storage_buffer_storage_class[]
+  ** *StorageBuffer*
+endif::VK_VERSION_1_1,VK_KHR_storage_buffer_storage_class[]
+ifdef::VK_NV_ray_tracing,VK_KHR_ray_tracing[]
+  ** *RayPayloadKHR*
+  ** *IncomingRayPayloadKHR*
+  ** *HitAttributeKHR*
+  ** *CallableDataKHR*
+  ** *IncomingCallableDataKHR*
+  ** *ShaderRecordBufferKHR*
+endif::VK_NV_ray_tracing,VK_KHR_ray_tracing[]
+ifdef::VK_VERSION_1_2,VK_EXT_buffer_device_address,VK_KHR_buffer_device_address[]
+  ** *PhysicalStorageBuffer*
+endif::VK_VERSION_1_2,VK_EXT_buffer_device_address,VK_KHR_buffer_device_address[]
+  * Memory semantics must: obey the following rules:
+  ** *Acquire* must: not be used with code:OpAtomicStore.
+  ** *Release* must: not be used with code:OpAtomicLoad.
+  ** *AcquireRelease* must: not be used with code:OpAtomicStore or
+     code:OpAtomicLoad.
+  ** Sequentially consistent atomics and barriers are not supported and
+     *SequentiallyConsistent* is treated as *AcquireRelease*.
+     *SequentiallyConsistent* should: not be used.
+  ** code:OpMemoryBarrier must: use one of *Acquire*, *Release*,
+     *AcquireRelease*, or *SequentiallyConsistent* and must: include at
+     least one storage class.
+  ** If the semantics for code:OpControlBarrier includes one of *Acquire*,
+     *Release*, *AcquireRelease*, or *SequentiallyConsistent*, then it must:
+     include at least one storage class.
+  ** *SubgroupMemory*, *CrossWorkgroupMemory*, and *AtomicCounterMemory* are
+     ignored.
+// Jon: Incorporate VK_VERSION_1_2 in conditional
+ifdef::VK_VERSION_1_2,VK_KHR_shader_float16_int8[]
+ifndef::VK_KHR_8bit_storage[]
+  * Any code:OpVariable with the result type pointing to an 8-bit integer
+    object or an object containing an 8-bit integer element must: not have
+    one of the following as its code:Storage code:Class operand:
+  ** *Uniform*
+  ** *PushConstant*
+ifdef::VK_VERSION_1_1,VK_KHR_storage_buffer_storage_class[]
+  ** *StorageBuffer*
+endif::VK_VERSION_1_1,VK_KHR_storage_buffer_storage_class[]
+endif::VK_KHR_8bit_storage[]
+endif::VK_VERSION_1_2,VK_KHR_shader_float16_int8[]
+// Jon: Incorporate VK_VERSION_1_2 in conditional
+ifdef::VK_VERSION_1_2,VK_KHR_shader_float16_int8[]
+ifndef::VK_KHR_16bit_storage[]
+  * Any code:OpVariable with the result type pointing to a 16-bit
+    floating-point object or an object containing a 16-bit floating-point
+    element must: not have one of the following as its code:Storage
+    code:Class operand:
+  ** *Uniform*
+  ** *PushConstant*
+ifdef::VK_VERSION_1_1,VK_KHR_storage_buffer_storage_class[]
+  ** *StorageBuffer*
+endif::VK_VERSION_1_1,VK_KHR_storage_buffer_storage_class[]
+endif::VK_KHR_16bit_storage[]
+endif::VK_VERSION_1_2,VK_KHR_shader_float16_int8[]
+  * Any code:OpVariable with an code:Initializer operand must: have one of
+    the following as its *Storage Class* operand:
+  ** *Output*
+  ** *Private*
+  ** *Function*
+ifdef::VK_KHR_shader_clock[]
+  * Scope for code:OpReadClockKHR must: be limited to:
+     ** code:Subgroup
+     *** if <<features-shaderSubgroupClock,pname:shaderSubgroupClock>> is
+         not enabled, the code:Subgroup scope must: not be used.
+     ** code:Device
+     *** if <<features-shaderDeviceClock,pname:shaderDeviceClock>> is not
+         enabled, the code:Device scope must: not be used.
+endif::VK_KHR_shader_clock[]
+  * The code:OriginLowerLeft execution mode must: not be used; fragment
+    entry points must: declare code:OriginUpperLeft.
+  * The code:PixelCenterInteger execution mode must: not be used.
+    Pixels are always centered at half-integer coordinates.
+  * Any variable in the code:UniformConstant storage class must: be typed as
+    either:
+  ** code:OpTypeImage
+  ** code:OpTypeSampler
+  ** code:OpTypeSampledImage
+ifdef::VK_KHR_ray_tracing,VK_NV_ray_tracing[]
+  ** code:OpTypeAccelerationStructureKHR,
+endif::VK_KHR_ray_tracing,VK_NV_ray_tracing[]
+  ** An array of one of these types.
+  * Images and Samplers
+  ** code:OpTypeImage must: declare a scalar 32-bit float or 32-bit integer
+     type for the "`Sampled Type`".
+     (code:RelaxedPrecision can: be applied to a sampling instruction and to
+     the variable holding the result of a sampling instruction.)
+  ** If the code:Sampled code:Type of an code:OpTypeImage declaration does
+     not match the numeric format of the corresponding resource in type, as
+     shown in the _SPIR-V Sampled Type_ column of the
+     <<formats-numericformat>> table, the values obtained by reading or
+     sampling from the image are undefined:.
+  ** If the signedness of any read or sample operation does not match the
+     signedness of the corresponding resource then the values obtained are
+     undefined:.
+  ** code:OpTypeImage must: have a "`Sampled`" operand of 1 (sampled image)
+     or 2 (storage image).
+  ** If
+     <<features-shaderStorageImageReadWithoutFormat,shaderStorageImageReadWithoutFormat>>
+     is not enabled and an code:OpTypeImage has "`Image Format`" operand of
+     code:Unknown, any variables created with the given type must: be
+     decorated with code:NonReadable.
+  ** If
+     <<features-shaderStorageImageWriteWithoutFormat,shaderStorageImageWriteWithoutFormat>>
+     is not enabled and an code:OpTypeImage has "`Image Format`" operand of
+     code:Unknown, any variables created with the given type must: be
+     decorated with code:NonWritable.
+  ** If an code:OpImageTexelPointer is used in an atomic operation, the
+     image type of the code:image parameter to code:OpImageTexelPointer
+     must: have an image format of code:R32i or code:R32ui.
+  ** code:OpImageQuerySizeLod, and code:OpImageQueryLevels must: only
+     consume an "`Image`" operand whose type has its "`Sampled`" operand set
+     to 1.
+  ** The [eq]#(u,v)# coordinates used for a code:SubpassData must: be the
+     <id> of a constant vector [eq]#(0,0)#, or if a layer coordinate is
+     used, must: be a vector that was formed with constant 0 for the [eq]#u#
+     and [eq]#v# components.
+  ** The "`Depth`" operand of code:OpTypeImage is ignored.
+  ** Objects of types code:OpTypeImage, code:OpTypeSampler,
+     code:OpTypeSampledImage, and arrays of these types must: not be stored
+     to or modified.
+  * Any image operation must: use at most one of the code:Offset,
+    code:ConstOffset, and code:ConstOffsets image operands.
+  * Image operand code:Offset must: only be used with
+    code:OpImage*code:Gather instructions.
+  * The "`Component`" operand of code:OpImageGather, and
+    code:OpImageSparseGather must: be the <id> of a constant instruction.
+ifdef::VK_NV_ray_tracing,VK_KHR_ray_tracing[]
+  * Acceleration Structures
+  ** Objects of types code:OpTypeAccelerationStructureKHR and arrays of this
+     type must: not be stored to or modified.
+  * The value of the "`Hit Kind`" operand of code:OpReportIntersectionKHR
+    must: be in the range [eq]#[0,127]#.
+endif::VK_NV_ray_tracing,VK_KHR_ray_tracing[]
+  * Structure types must: not contain opaque types.
+  * Decorations
+  ** Any code:BuiltIn decoration not listed in
+     <<interfaces-builtin-variables>> must: not be used.
+  ** Any code:BuiltIn decoration that corresponds only to Vulkan features or
+     extensions that have not been enabled must: not be used.
+  ** The code:GLSLShared and code:GLSLPacked decorations must: not be used.
+  ** The code:Flat, code:NoPerspective, code:Sample, and code:Centroid
+     decorations must: not be used on variables with storage class other
+     than code:Input or on variables used in the interface of non-fragment
+     shader entry points.
+  ** The code:Patch decoration must: not be used on variables in the
+     interface of a vertex, geometry, or fragment shader stage's entry
+     point.
+ifdef::VK_NV_viewport_array2[]
+  ** The code:ViewportRelativeNV decoration must: only be used on a variable
+     decorated with code:Layer in the vertex, tessellation evaluation, or
+     geometry shader stages.
+  ** The code:ViewportRelativeNV decoration must: not be used unless a
+     variable decorated with one of code:ViewportIndex or
+     code:ViewportMaskNV is also statically used by the same
+     code:OpEntryPoint.
+  ** The code:ViewportMaskNV and code:ViewportIndex decorations must: not
+     both be statically used by one or more code:OpEntryPoint's that form
+     the vertex processing stages of a graphics pipeline.
+endif::VK_NV_viewport_array2[]
+ifdef::VK_VERSION_1_1,VK_KHR_16bit_storage[]
+  ** Only the round-to-nearest-even and the round-towards-zero rounding
+     modes can: be used for the code:FPRoundingMode decoration.
+  ** The code:FPRoundingMode decoration can: only be used for the
+     floating-point conversion instructions as described in the
+     {spirv}/KHR/SPV_KHR_16bit_storage.html[`SPV_KHR_16bit_storage`] SPIR-V
+     extension.
+endif::VK_VERSION_1_1,VK_KHR_16bit_storage[]
+  ** code:DescriptorSet and code:Binding decorations must: obey the
+     constraints on storage class, type, and descriptor type described in
+     <<interfaces-resources-setandbinding,DescriptorSet and Binding
+     Assignment>>
+  ** Variables decorated with code:Invariant and variables with structure
+     types that have any members decorated with code:Invariant must: be in
+     the code:Output or code:Input storage class.
+     code:Invariant used on an code:Input storage class variable or
+     structure member has no effect.
+  * code:OpTypeRuntimeArray must: only be used for:
+  ** the last member of an code:OpTypeStruct
+ifdef::VK_VERSION_1_1,VK_KHR_storage_buffer_storage_class[]
+     that is in the code:StorageBuffer storage class decorated as
+     code:Block, or
+endif::VK_VERSION_1_1,VK_KHR_storage_buffer_storage_class[]
+ifdef::VK_VERSION_1_2,VK_EXT_buffer_device_address,VK_KHR_buffer_device_address[]
+     that is in the code:PhysicalStorageBuffer storage class decorated as
+     code:Block, or
+endif::VK_VERSION_1_2,VK_EXT_buffer_device_address,VK_KHR_buffer_device_address[]
+     that is in the code:Uniform storage class decorated as
+     code:BufferBlock.
+ifdef::VK_VERSION_1_2,VK_EXT_descriptor_indexing[]
+  ** If the code:RuntimeDescriptorArray capability is supported, an array of
+     variables with storage class code:Uniform,
+ifdef::VK_VERSION_1_1,VK_KHR_storage_buffer_storage_class[]
+     code:StorageBuffer,
+endif::VK_VERSION_1_1,VK_KHR_storage_buffer_storage_class[]
+     or code:UniformConstant, or for the outermost dimension of an array of
+     arrays of such variables.
+endif::VK_VERSION_1_2,VK_EXT_descriptor_indexing[]
+  * Specialization constants:
+  ** A type _T_ that is an array sized with a specialization constant can:
+     be, or be contained in, the type of a Variable _V_ only if:
+     *** _T_ is the (top-level) type of _V_, or
+     *** _V_ is declared in the code:Function, code:Private, or
+         code:Workgroup storage classes, or
+     *** _V_ is an interface variable with an additional level of arrayness,
+         <<interfaces-iointerfaces-matching, as described in interface
+         matching>>, in which case _T_ is allowed to be the element type of
+         the (top-level) type of _V_.
+  * Linkage: See <<interfaces,Shader Interfaces>> for additional linking and
+    validation rules.
+ifdef::VK_VERSION_1_1[]
+  * If code:OpControlBarrier is used in
+ifdef::VK_KHR_ray_tracing,VK_NV_ray_tracing[]
+    ray generation, intersection, any-hit, closest hit, miss,
+endif::VK_KHR_ray_tracing,VK_NV_ray_tracing[]
+    fragment, vertex, tessellation evaluation, or geometry shaders, the
+    execution Scope must: be code:Subgroup.
+endif::VK_VERSION_1_1[]
+  * Compute Shaders
+  ** For each compute shader entry point, either a code:LocalSize execution
+     mode or an object decorated with the code:WorkgroupSize decoration
+     must: be specified.
+ifdef::VK_NV_compute_shader_derivatives[]
+  ** For compute shaders using the code:DerivativeGroupQuadsNV execution
+     mode, the first two dimensions of the local workgroup size must: be a
+     multiple of two.
+  ** For compute shaders using the code:DerivativeGroupLinearNV execution
+     mode, the product of the dimensions of the local workgroup size must:
+     be a multiple of four.
+endif::VK_NV_compute_shader_derivatives[]
+ifdef::VK_VERSION_1_1[]
+  * "`Result Type`" for *Non Uniform Group Operations* must: be limited to
+    32-bit floating-point, 32-bit integer, boolean, or vectors of these
+    types.
+  ** If the code:Float64 capability is enabled, 64-bit floating-point and
+     vector of 64-bit floating-point types are also permitted.
+ifdef::VK_VERSION_1_2,VK_KHR_shader_subgroup_extended_types[]
+  ** If the code:Int8 capability is enabled and the
+     <<features-subgroup-extended-types,shaderSubgroupExtendedTypes>>
+     feature is ename:VK_TRUE, 8-bit integer and vector of 8-bit integer
+     types are also permitted.
+  ** If the code:Int16 capability is enabled and the
+     <<features-subgroup-extended-types,shaderSubgroupExtendedTypes>>
+     feature is ename:VK_TRUE, 16-bit integer and vector of 16-bit integer
+     types are also permitted.
+  ** If the code:Int64 capability is enabled and the
+     <<features-subgroup-extended-types,shaderSubgroupExtendedTypes>>
+     feature is ename:VK_TRUE, 64-bit integer and vector of 64-bit integer
+     types are also permitted.
+  ** If the code:Float16 capability is enabled and the
+     <<features-subgroup-extended-types,shaderSubgroupExtendedTypes>>
+     feature is ename:VK_TRUE, 16-bit floating-point and vector of 16-bit
+     floating-point types are also permitted.
+endif::VK_VERSION_1_2,VK_KHR_shader_subgroup_extended_types[]
+  * If code:OpGroupNonUniformBallotBitCount is used, the group operation
+    must: be one of:
+  ** *Reduce*
+  ** *InclusiveScan*
+  ** *ExclusiveScan*
+endif::VK_VERSION_1_1[]
+ifdef::VK_VERSION_1_2[]
+  * If
+    <<features-subgroupBroadcastDynamicId,code:subgroupBroadcastDynamicId>>
+    is ename:VK_TRUE, and the shader module version is 1.5 or higher, the
+    "`Index`" for code:OpGroupNonUniformQuadBroadcast must: be dynamically
+    uniform within the derivative group.
+    Otherwise, "`Index`" must: be a constant.
+  * If
+    <<features-subgroupBroadcastDynamicId,code:subgroupBroadcastDynamicId>>
+    is ename:VK_TRUE, and the shader module version is 1.5 or higher, the
+    "`Id`" for code:OpGroupNonUniformBroadcast must: be dynamically uniform
+    within the subgroup.
+    Otherwise, "`Id`" must: be a constant.
+endif::VK_VERSION_1_2[]
+  * Atomic instructions must: declare a scalar 32-bit integer type,
+ifdef::VK_KHR_shader_atomic_int64[]
+    or a scalar 64-bit integer type if the code:Int64Atomics capability is
+    enabled,
+endif::VK_KHR_shader_atomic_int64[]
+    for the value pointed to by _Pointer_.
+ifdef::VK_KHR_shader_atomic_int64[]
+  ** <<features-shaderBufferInt64Atomics,shaderBufferInt64Atomics>> must: be
+     enabled for 64-bit integer atomic operations to be supported on a
+     _Pointer_ with a *Storage Class* of
+ifdef::VK_VERSION_1_1,VK_KHR_storage_buffer_storage_class[]
+     *StorageBuffer* or
+endif::VK_VERSION_1_1,VK_KHR_storage_buffer_storage_class[]
+     *Uniform*.
+  ** <<features-shaderSharedInt64Atomics,shaderSharedInt64Atomics>> must: be
+     enabled for 64-bit integer atomic operations to be supported on a
+     _Pointer_ with a *Storage Class* of *Workgroup*.
+endif::VK_KHR_shader_atomic_int64[]
+  * The _Pointer_ operand of all atomic instructions must: have a *Storage
+    Class* limited to:
+  ** *Uniform*
+  ** *Workgroup*
+  ** *Image*
+ifdef::VK_VERSION_1_1,VK_KHR_storage_buffer_storage_class[]
+  ** *StorageBuffer*
+endif::VK_VERSION_1_1,VK_KHR_storage_buffer_storage_class[]
+ifdef::VK_VERSION_1_2,VK_EXT_descriptor_indexing[]
+  * If an instruction loads from or stores to a resource (including atomics
+    and image instructions) and the resource descriptor being accessed is
+    not dynamically uniform, then the operand corresponding to that resource
+    (e.g. the pointer or sampled image operand) must: be decorated with
+    code:NonUniform.
+endif::VK_VERSION_1_2,VK_EXT_descriptor_indexing[]
+ifdef::VK_VERSION_1_2,VK_KHR_shader_float_controls[]
+  * If
+    <<features-denormBehaviorIndependence,pname:denormBehaviorIndependence>>
+    is ename:VK_SHADER_FLOAT_CONTROLS_INDEPENDENCE_32_BIT_ONLY, then the
+    entry point must: use the same denormals execution mode for both 16-bit
+    and 64-bit floating-point types.
+  * If
+    <<features-denormBehaviorIndependence,pname:denormBehaviorIndependence>>
+    is ename:VK_SHADER_FLOAT_CONTROLS_INDEPENDENCE_NONE, then the entry
+    point must: use the same denormals execution mode for all floating-point
+    types.
+  * If <<features-roundingModeIndependence,pname:roundingModeIndependence>>
+    is ename:VK_SHADER_FLOAT_CONTROLS_INDEPENDENCE_32_BIT_ONLY, then the
+    entry point must: use the same rounding execution mode for both 16-bit
+    and 64-bit floating-point types.
+  * If <<features-roundingModeIndependence,pname:roundingModeIndependence>>
+    is ename:VK_SHADER_FLOAT_CONTROLS_INDEPENDENCE_NONE, then the entry
+    point must: use the same rounding execution mode for all floating-point
+    types.
+  * If
+    <<features-shaderSignedZeroInfNanPreserveFloat16,pname:shaderSignedZeroInfNanPreserveFloat16>>
+    is ename:VK_FALSE, then code:SignedZeroInfNanPreserve for 16-bit
+    floating-point type must: not be used.
+  * If
+    <<features-shaderSignedZeroInfNanPreserveFloat32,pname:shaderSignedZeroInfNanPreserveFloat32>>
+    is ename:VK_FALSE, then code:SignedZeroInfNanPreserve for 32-bit
+    floating-point type must: not be used.
+  * If
+    <<features-shaderSignedZeroInfNanPreserveFloat64,pname:shaderSignedZeroInfNanPreserveFloat64>>
+    is ename:VK_FALSE, then code:SignedZeroInfNanPreserve for 64-bit
+    floating-point type must: not be used.
+  * If
+    <<features-shaderDenormPreserveFloat16,pname:shaderDenormPreserveFloat16>>
+    is ename:VK_FALSE, then code:DenormPreserve for 16-bit floating-point
+    type must: not be used.
+  * If
+    <<features-shaderDenormPreserveFloat32,pname:shaderDenormPreserveFloat32>>
+    is ename:VK_FALSE, then code:DenormPreserve for 32-bit floating-point
+    type must: not be used.
+  * If
+    <<features-shaderDenormPreserveFloat64,pname:shaderDenormPreserveFloat64>>
+    is ename:VK_FALSE, then code:DenormPreserve for 64-bit floating-point
+    type must: not be used.
+  * If
+    <<features-shaderDenormFlushToZeroFloat16,pname:shaderDenormFlushToZeroFloat16>>
+    is ename:VK_FALSE, then code:DenormFlushToZero for 16-bit floating-point
+    type must: not be used.
+  * If
+    <<features-shaderDenormFlushToZeroFloat32,pname:shaderDenormFlushToZeroFloat32>>
+    is ename:VK_FALSE, then code:DenormFlushToZero for 32-bit floating-point
+    type must: not be used.
+  * If
+    <<features-shaderDenormFlushToZeroFloat64,pname:shaderDenormFlushToZeroFloat64>>
+    is ename:VK_FALSE, then code:DenormFlushToZero for 64-bit floating-point
+    type must: not be used.
+  * If
+    <<features-shaderRoundingModeRTEFloat16,pname:shaderRoundingModeRTEFloat16>>
+    is ename:VK_FALSE, then code:RoundingModeRTE for 16-bit floating-point
+    type must: not be used.
+  * If
+    <<features-shaderRoundingModeRTEFloat32,pname:shaderRoundingModeRTEFloat32>>
+    is ename:VK_FALSE, then code:RoundingModeRTE for 32-bit floating-point
+    type must: not be used.
+  * If
+    <<features-shaderRoundingModeRTEFloat64,pname:shaderRoundingModeRTEFloat64>>
+    is ename:VK_FALSE, then code:RoundingModeRTE for 64-bit floating-point
+    type must: not be used.
+  * If
+    <<features-shaderRoundingModeRTZFloat16,pname:shaderRoundingModeRTZFloat16>>
+    is ename:VK_FALSE, then code:RoundingModeRTZ for 16-bit floating-point
+    type must: not be used.
+  * If
+    <<features-shaderRoundingModeRTZFloat32,pname:shaderRoundingModeRTZFloat32>>
+    is ename:VK_FALSE, then code:RoundingModeRTZ for 32-bit floating-point
+    type must: not be used.
+  * If
+    <<features-shaderRoundingModeRTZFloat64,pname:shaderRoundingModeRTZFloat64>>
+    is ename:VK_FALSE, then code:RoundingModeRTZ for 64-bit floating-point
+    type must: not be used.
+endif::VK_VERSION_1_2,VK_KHR_shader_float_controls[]
+ifdef::VK_EXT_transform_feedback[]
+  * The code:Offset plus size of the type of each variable, in the output
+    interface of the entry point being compiled, decorated with
+    code:XfbBuffer must: not be greater than
+    sname:VkPhysicalDeviceTransformFeedbackPropertiesEXT::pname:maxTransformFeedbackBufferDataSize
+  * For any given code:XfbBuffer value, define the buffer data size to be
+    smallest number of bytes such that, for all outputs decorated with the
+    same code:XfbBuffer value, the size of the output interface variable
+    plus the code:Offset is less than or equal to the buffer data size.
+    For a given code:Stream, the sum of all the buffer data sizes for all
+    buffers writing to that stream the must: not exceed
+    sname:VkPhysicalDeviceTransformFeedbackPropertiesEXT::pname:maxTransformFeedbackStreamDataSize
+  * Output variables or block members decorated with code:Offset that have a
+    64-bit type, or a composite type containing a 64-bit type, must: specify
+    an code:Offset value aligned to a 8 byte boundary
+  * Any output block or block member decorated with code:Offset containing a
+    64-bit type consumes a multiple of 8 bytes
+  * The size of any output block containing any member decorated with
+    code:Offset that is a 64-bit type must: be a multiple of 8
+  * The first member of an output block that specifies a code:Offset
+    decoration must: specify a code:Offset value that is aligned to an 8
+    byte boundary if that block contains any member decorated with
+    code:Offset and is a 64-bit type
+  * Output variables or block members decorated with code:Offset that have a
+    32-bit type, or a composite type contains a 32-bit type, must: specify
+    an code:Offset value aligned to a 4 byte boundary
+  * Output variables, blocks or block members decorated with code:Offset
+    must: only contain base types that have components that are either
+    32-bit or 64-bit in size
+  * The Stream value to code:OpEmitStreamVertex and
+    code:OpEndStreamPrimitive must: be less than
+    sname:VkPhysicalDeviceTransformFeedbackPropertiesEXT::pname:maxTransformFeedbackStreams
+  * If the geometry shader emits to more than one vertex stream and
+    sname:VkPhysicalDeviceTransformFeedbackPropertiesEXT::pname:transformFeedbackStreamsLinesTriangles
+    is ename:VK_FALSE, then execution mode must: be code:OutputPoints
+  * Only variables or block members in the output interface decorated with
+    code:Offset can: be captured for transform feedback, and those variables
+    or block memebers must: also be decorated with code:XfbBuffer and
+    code:XfbStride, or inherit code:XfbBuffer and code:XfbStride decorations
+    from a block containing them
+  * All variables or block members in the output interface of the entry
+    point being compiled decorated with a specific code:XfbBuffer value
+    must: all be decorated with identical code:XfbStride values
+  * If any variables or block members in the output interface of the entry
+    point being compiled are decorated with code:Stream, then all variables
+    belonging to the same code:XfbBuffer must: specify the same code:Stream
+    value
+  * Output variables, blocks or block members that are not decorated with
+    code:Stream default to vertex stream zero
+  * For any two variables or block members in the output interface of the
+    entry point being compiled with the same code:XfbBuffer value, the
+    ranges determined by the code:Offset decoration and the size of the type
+    must: not overlap
+  * The stream number value to code:Stream must: be less than
+    sname:VkPhysicalDeviceTransformFeedbackPropertiesEXT::pname:maxTransformFeedbackStreams
+  * The XFB Stride value to code:XfbStride must: be less than or equal to
+    sname:VkPhysicalDeviceTransformFeedbackPropertiesEXT::pname:maxTransformFeedbackBufferDataStride
+endif::VK_EXT_transform_feedback[]
+ifdef::VK_NV_ray_tracing,VK_KHR_ray_tracing[]
+  * code:RayPayloadKHR storage class must: only be used in ray generation,
+    any-hit, closest hit or miss shaders.
+  * code:IncomingRayPayloadKHR storage class must: only be used in closest
+    hit, any-hit, or miss shaders.
+  * code:HitAttributeKHR storage class must: only be used in intersection,
+    any-hit, or closest hit shaders.
+  * code:CallableDataKHR storage class must: only be used in ray generation,
+    closest hit, miss, and callable shaders.
+  * code:IncomingCallableDataKHR storage class must: only be used in
+    callable shaders.
+endif::VK_NV_ray_tracing,VK_KHR_ray_tracing[]
+ifdef::VK_VERSION_1_2,VK_VERSION_1_1,VK_KHR_variable_pointers,VK_EXT_buffer_device_address,VK_KHR_buffer_device_address[]
+  * The code:Base operand of code:OpPtrAccessChain must: point to one of the
+    following storage classes:
+ifdef::VK_VERSION_1_1,VK_KHR_variable_pointers[]
+  ** *Workgroup*, if code:VariablePointers is enabled.
+  ** *StorageBuffer*, if code:VariablePointers or
+     code:VariablePointersStorageBuffer is enabled.
+endif::VK_VERSION_1_1,VK_KHR_variable_pointers[]
+ifdef::VK_VERSION_1_2,VK_EXT_buffer_device_address,VK_KHR_buffer_device_address[]
+  ** *PhysicalStorageBuffer*, if the code:PhysicalStorageBuffer64 addressing
+     model is enabled.
+endif::VK_VERSION_1_2,VK_EXT_buffer_device_address,VK_KHR_buffer_device_address[]
+endif::VK_VERSION_1_2,VK_VERSION_1_1,VK_KHR_variable_pointers,VK_EXT_buffer_device_address,VK_KHR_buffer_device_address[]
+ifdef::VK_VERSION_1_2,VK_EXT_buffer_device_address,VK_KHR_buffer_device_address[]
+  * If the code:PhysicalStorageBuffer64 addressing model is enabled:
+  ** Any load or store through a physical pointer type must: be aligned to a
+     multiple of the size of the largest scalar type in the pointed-to type.
+  ** All instructions that support memory access operands and that use a
+     physical pointer must: include the code:Aligned operand.
+  ** The pointer value of a memory access instruction must: be at least as
+     aligned as specified by the code:Aligned memory access operand.
+  ** Any access chain instruction that accesses into a code:RowMajor matrix
+     must: only be used as the code:Pointer operand to code:OpLoad or
+     code:OpStore.
+  ** code:OpConvertUToPtr and code:OpConvertPtrToU must: use an integer type
+     whose code:Width is 64.
+endif::VK_VERSION_1_2,VK_EXT_buffer_device_address,VK_KHR_buffer_device_address[]
+ifdef::VK_NV_cooperative_matrix[]
+  * For code:OpCooperativeMatrixLoadNV and code:OpCooperativeMatrixStoreNV
+    instructions, the code:Pointer and code:Stride operands must: be aligned
+    to at least the lesser of 16 bytes or the natural alignment of a row or
+    column (depending on code:ColumnMajor) of the matrix (where the natural
+    alignment is the number of columns/rows multiplied by the component
+    size).
+  * For code:OpTypeCooperativeMatrixNV, the component type, scope, number of
+    rows, and number of columns must: match one of the matrices in any of
+    the supported slink:VkCooperativeMatrixPropertiesNV.
+  * For code:OpCooperativeMatrixMulAddNV, the code:Result, code:A, code:B,
+    and code:C matrices must: all have types that satisfy the same supported
+    slink:VkCooperativeMatrixPropertiesNV.
+    That is, for one supported slink:VkCooperativeMatrixPropertiesNV, all of
+    the following must: hold:
+  ** The type of code:A must: have pname:MSize rows and pname:KSize columns
+     and have a component type that matches pname:AType.
+  ** The type of code:B must: have pname:KSize rows and pname:NSize columns
+     and have a component type that matches pname:BType.
+  ** The type of code:C must: have pname:MSize rows and pname:NSize columns
+     and have a component type that matches pname:CType.
+  ** The type of code:Result must: have pname:MSize rows and pname:NSize
+     columns and have a component type that matches pname:DType.
+  ** The type of code:A, code:B, code:C, and code:Result must: all have a
+     scope of pname:scope.
+  * code:OpTypeCooperativeMatrixNV and code:OpCooperativeMatrix*
+    instructions must: not be used in shader stages not included in
+    slink:VkPhysicalDeviceCooperativeMatrixPropertiesNV::pname:cooperativeMatrixSupportedStages.
+endif::VK_NV_cooperative_matrix[]
+
+
+[[spirvenv-precision-operation]]
+== Precision and Operation of SPIR-V Instructions
+
+The following rules apply to half, single, and double-precision floating
+point instructions:
+
+  * Positive and negative infinities and positive and negative zeros are
+    generated as dictated by <<ieee-754,IEEE 754>>, but subject to the
+    precisions allowed in the following table.
+  * Dividing a non-zero by a zero results in the appropriately signed
+    <<ieee-754,IEEE 754>> infinity.
+  * Signaling [eq]##NaN##s are not required to be generated and exceptions
+    are never raised.
+    Signaling [eq]##NaN## may: be converted to quiet [eq]##NaN##s values by
+    any floating point instruction.
+  * By default, the implementation may: perform optimizations on half,
+    single, or double-precision floating-point instructions that ignore sign
+    of a zero, or assume that arguments and results are not NaNs or
+    infinities.
+ifdef::VK_VERSION_1_2,VK_KHR_shader_float_controls[]
+    If the entry point is declared with the code:SignedZeroInfNanPreserve
+    execution mode, then NaNs, infinities, and the sign of zero must: not be
+    ignored.
+  ** The following core SPIR-V instructions must: respect the
+     code:SignedZeroInfNanPreserve execution mode: code:OpPhi,
+     code:OpSelect, code:OpReturnValue, code:OpVectorExtractDynamic,
+     code:OpVectorInsertDynamic, code:OpVectorShuffle,
+     code:OpCompositeConstruct, code:OpCompositeExtract,
+     code:OpCompositeInsert, code:OpCopyObject, code:OpTranspose,
+     code:OpFConvert, code:OpFNegate, code:OpFAdd, code:OpFSub, code:OpFMul,
+     code:OpStore.
+     This execution mode must: also be respected by code:OpLoad except for
+     loads from the code:Input storage class in the fragment shader stage
+     with the floating-point result type.
+     Other SPIR-V instructions may: also respect the
+     code:SignedZeroInfNanPreserve execution mode.
+endif::VK_VERSION_1_2,VK_KHR_shader_float_controls[]
+  * The following instructions must: not flush denormalized values:
+    code:OpConstant, code:OpConstantComposite, code:OpSpecConstant,
+    code:OpSpecConstantComposite, code:OpLoad, code:OpStore, code:OpBitcast,
+    code:OpPhi, code:OpSelect, code:OpFunctionCall, code:OpReturnValue,
+    code:OpVectorExtractDynamic, code:OpVectorInsertDynamic,
+    code:OpVectorShuffle, code:OpCompositeConstruct,
+    code:OpCompositeExtract, code:OpCompositeInsert, code:OpCopyMemory,
+    code:OpCopyObject.
+ifndef::VK_VERSION_1_2,VK_KHR_shader_float_controls[]
+  * Any denormalized value input into a shader or potentially generated by
+    any instruction in a shader (except those listed above) may: be flushed
+    to 0.
+  * The rounding mode cannot: be set, and results will be
+    <<spirvenv-correctly-rounded, correctly rounded>>, as described below.
+  * [eq]##NaN##s may: not be generated.
+    Instructions that operate on a [eq]#NaN# may: not result in a [eq]#NaN#.
+endif::VK_VERSION_1_2,VK_KHR_shader_float_controls[]
+ifdef::VK_VERSION_1_2,VK_KHR_shader_float_controls[]
+  * Denormalized values are supported.
+  ** By default, any half, single, or double-precision denormalized value
+     input into a shader or potentially generated by any instruction (except
+     those listed above) or any extended instructions for GLSL in a shader
+     may: be flushed to zero.
+  ** If the entry point is declared with the code:DenormFlushToZero
+     execution mode then for the affected instuctions the denormalized
+     result must: be flushed to zero and the denormalized operands may: be
+     flushed to zero.
+     Denormalized values obtained via unpacking an integer into a vector of
+     values with smaller bit width and interpreting those values as
+     floating-point numbers must: be flushed to zero.
+  ** The following core SPIR-V instructions must: respect the
+     code:DenormFlushToZero execution mode: code:OpSpecConstantOp (with
+     opcode code:OpFConvert), code:OpFConvert, code:OpFNegate, code:OpFAdd,
+     code:OpFSub, code:OpFMul, code:OpFDiv, code:OpFRem, code:OpFMod,
+     code:OpVectorTimesScalar, code:OpMatrixTimesScalar,
+     code:OpVectorTimesMatrix, code:OpMatrixTimesVector,
+     code:OpMatrixTimesMatrix, code:OpOuterProduct, code:OpDot; and the
+     following extended instructions for GLSL: code:Round, code:RoundEven,
+     code:Trunc, code:FAbs, code:Floor, code:Ceil, code:Fract, code:Radians,
+     code:Degrees, code:Sin, code:Cos, code:Tan, code:Asin, code:Acos,
+     code:Atan, code:Sinh, code:Cosh, code:Tanh, code:Asinh, code:Acosh,
+     code:Atanh, code:Atan2, code:Pow, code:Exp, code:Log, code:Exp2,
+     code:Log2, code:Sqrt, code:InverseSqrt, code:Determinant,
+     code:MatrixInverse, code:Modf, code:ModfStruct, code:FMin, code:FMax,
+     code:FClamp, code:FMix, code:Step, code:SmoothStep, code:Fma,
+     code:UnpackHalf2x16, code:UnpackDouble2x32, code:Length, code:Distance,
+     code:Cross, code:Normalize, code:FaceForward, code:Reflect,
+     code:Refract, code:NMin, code:NMax, code:NClamp.
+     Other SPIR-V instructions (except those excluded above) may: also flush
+     denormalized values.
+  ** The following core SPIR-V instructions must: respect the
+     code:DenormPreserve execution mode: code:OpTranspose,
+     code:OpSpecConstantOp, code:OpFConvert, code:OpFNegate, code:OpFAdd,
+     code:OpFSub, code:OpFMul, code:OpVectorTimesScalar,
+     code:OpMatrixTimesScalar, code:OpVectorTimesMatrix,
+     code:OpMatrixTimesVector, code:OpMatrixTimesMatrix,
+     code:OpOuterProduct, code:OpDot, code:OpFOrdEqual, code:OpFUnordEqual,
+     code:OpFOrdNotEqual, code:OpFUnordNotEqual, code:OpFOrdLessThan,
+     code:OpFUnordLessThan, code:OpFOrdGreaterThan,
+     code:OpFUnordGreaterThan, code:OpFOrdLessThanEqual,
+     code:OpFUnordLessThanEqual, code:OpFOrdGreaterThanEqual,
+     code:OpFUnordGreaterThanEqual; and the following extended instructions
+     for GLSL: code:FAbs, code:FSign, code:Radians, code:Degrees, code:FMin,
+     code:FMax, code:FClamp, code:FMix, code:Fma, code:PackHalf2x16,
+     code:PackDouble2x32, code:UnpackHalf2x16, code:UnpackDouble2x32,
+     code:NMin, code:NMax, code:NClamp.
+     Other SPIR-V instructions may: also preserve denorm values.
+endif::VK_VERSION_1_2,VK_KHR_shader_float_controls[]
+
+The precision of double-precision instructions is at least that of single
+precision.
+
+The precision of operations is defined either in terms of rounding, as an
+error bound in ULP, or as inherited from a formula as follows.
+
+[[spirvenv-correctly-rounded]]
+.Correctly Rounded
+Operations described as "`correctly rounded`" will return the infinitely
+precise result, [eq]#x#, rounded so as to be representable in
+floating-point.
+ifdef::VK_VERSION_1_2,VK_KHR_shader_float_controls[]
+The rounding mode is not specified, unless the entry point is declared with
+the code:RoundingModeRTE or the code:RoundingModeRTZ execution mode.
+These execution modes affect only correctly rounded SPIR-V instructions.
+These execution modes do not affect code:OpQuantizeToF16.
+If the rounding mode is not specified then this rounding is implementation
+specific, subject to the following rules.
+endif::VK_VERSION_1_2,VK_KHR_shader_float_controls[]
+ifndef::VK_VERSION_1_2,VK_KHR_shader_float_controls[]
+The rounding mode used is not defined but must: obey the following rules.
+endif::VK_VERSION_1_2,VK_KHR_shader_float_controls[]
+If [eq]#x# is exactly representable then [eq]#x# will be returned.
+Otherwise, either the floating-point value closest to and no less than
+[eq]#x# or the value closest to and no greater than [eq]#x# will be
+returned.
+
+.ULP
+Where an error bound of [eq]#n# ULP (units in the last place) is given, for
+an operation with infinitely precise result #x# the value returned must: be
+in the range [eq]#[x - n {times} ulp(x), x {plus} n {times} ulp(x)]#.
+The function [eq]#ulp(x)# is defined as follows:
+
+  {empty}:: If there exist non-equal floating-point numbers #a# and #b# such
+    that [eq]#a {leq} x {leq} b# then [eq]#ulp(x)# is the minimum possible
+    distance between such numbers, latexmath:[ulp(x) = \mathrm{min}_{a,b} |
+    b - a |].
+    If such numbers do not exist then [eq]#ulp(x)# is defined to be the
+    difference between the two finite floating-point numbers nearest to
+    [eq]#x#.
+
+Where the range of allowed return values includes any value of magnitude
+larger than that of the largest representable finite floating-point number,
+operations may:, additionally, return either an infinity of the appropriate
+sign or the finite number with the largest magnitude of the appropriate
+sign.
+If the infinitely precise result of the operation is not mathematically
+defined then the value returned is undefined:.
+
+.Inherited From ...
+Where an operation's precision is described as being inherited from a
+formula, the result returned must: be at least as accurate as the result of
+computing an approximation to [eq]#x# using a formula equivalent to the
+given formula applied to the supplied inputs.
+Specifically, the formula given may be transformed using the mathematical
+associativity, commutativity and distributivity of the operators involved to
+yield an equivalent formula.
+The SPIR-V precision rules, when applied to each such formula and the given
+input values, define a range of permitted values.
+If [eq]#NaN# is one of the permitted values then the operation may return
+any result, otherwise let the largest permitted value in any of the ranges
+be [eq]#F~max~# and the smallest be [eq]#F~min~#.
+The operation must: return a value in the range [eq]#[x - E, x {plus} E]#
+where latexmath:[E = \mathrm{max} \left( | x - F_{\mathrm{min}} |, | x -
+F_{\mathrm{max}} | \right) ].
+ifdef::VK_VERSION_1_2,VK_KHR_shader_float_controls[]
+If the entry point is declared with the code:DenormFlushToZero execution
+mode, then any intermediate denormal value(s) while evaluating the formula
+may: be flushed to zero.
+Denormal final results must: be flushed to zero.
+If the entry point is declared with the code:DenormPreserve execution mode,
+then denormals must: be preserved throughout the formula.
+endif::VK_VERSION_1_2,VK_KHR_shader_float_controls[]
+
+ifdef::VK_VERSION_1_2,VK_KHR_shader_float16_int8[]
+For half- (16 bit) and single- (32 bit) precision instructions, precisions
+are required: to be at least as follows:
+
+.Precision of core SPIR-V Instructions
+[options="header", cols=",,"]
+|====
+| Instruction
+ | Single precision, unless decorated with RelaxedPrecision | Half precision
+| code:OpFAdd
+2+| Correctly rounded.
+| code:OpFSub
+2+| Correctly rounded.
+| code:OpFMul, code:OpVectorTimesScalar, code:OpMatrixTimesScalar
+2+| Correctly rounded.
+| code:OpDot(x, y)
+2+a| Inherited from latexmath:[\sum_{i = 0}^{n - 1} x_{i} \times y_{i}].
+| code:OpFOrdEqual, code:OpFUnordEqual
+2+| Correct result.
+| code:OpFOrdLessThan, code:OpFUnordLessThan
+2+| Correct result.
+| code:OpFOrdGreaterThan, code:OpFUnordGreaterThan
+2+| Correct result.
+| code:OpFOrdLessThanEqual, code:OpFUnordLessThanEqual
+2+| Correct result.
+| code:OpFOrdGreaterThanEqual, code:OpFUnordGreaterThanEqual
+2+| Correct result.
+| code:OpFDiv(x,y)
+ | 2.5 ULP for [eq]#{vert}y{vert}# in the range [2^-126^, 2^126^].   | 2.5 ULP for [eq]#{vert}y{vert}# in the range [2^-14^, 2^14^].
+| code:OpFRem(x,y)
+2+| Inherited from [eq]#x - y {times} trunc(x/y)#.
+| code:OpFMod(x,y)
+2+| Inherited from [eq]#x - y {times} floor(x/y)#.
+| conversions between types
+2+| Correctly rounded.
+|====
+
+[NOTE]
+.Note
+====
+The code:OpFRem and code:OpFMod instructions use cheap approximations of
+remainder, and the error can be large due to the discontinuity in trunc()
+and floor().
+This can produce mathematically unexpected results in some cases, such as
+FMod(x,x) computing x rather than 0, and can also cause the result to have a
+different sign than the infinitely precise result.
+====
+
+.Precision of GLSL.std.450 Instructions
+[options="header", cols=",,"]
+|====
+|Instruction
+  | Single precision, unless decorated with RelaxedPrecision | Half precision
+| code:fma()
+2+| Inherited from code:OpFMul followed by code:OpFAdd.
+| code:exp(x),  code:exp2(x)
+ a| latexmath:[3 + 2 \times \vert x \vert] ULP.             a| latexmath:[1 + 2 \times \vert x \vert] ULP.
+| code:log(),  code:log2()
+ a| 3 ULP outside the range latexmath:[[0.5, 2.0\]]. Absolute error < latexmath:[2^{-21}] inside the range latexmath:[[0.5, 2.0\]].
+ a| 3 ULP outside the range latexmath:[[0.5, 2.0\]]. Absolute error < latexmath:[2^{-7}] inside the range latexmath:[[0.5, 2.0\]].
+| code:pow(x, y)
+2+| Inherited from code:exp2(y {times} code:log2(x)).
+| code:sqrt()
+2+| Inherited from 1.0 / code:inversesqrt().
+| code:inversesqrt()
+2+| 2 ULP.
+| code:radians(x)
+2+a| Inherited from latexmath:[x \times \frac{\pi}{180}].
+| code:degrees(x)
+2+a| Inherited from latexmath:[x \times \frac{180}{\pi}].
+| code:sin()
+  a| Absolute error latexmath:[\leq 2^{-11}] inside the range latexmath:[[-\pi, \pi\]]. a| Absolute error latexmath:[\leq 2^{-7}] inside the range latexmath:[[-\pi, \pi\]].
+| code:cos()
+  a| Absolute error latexmath:[\leq 2^{-11}] inside the range latexmath:[[-\pi, \pi\]]. a| Absolute error latexmath:[\leq 2^{-7}] inside the range latexmath:[[-\pi, \pi\]].
+| code:tan()
+2+a| Inherited from latexmath:[\frac{\sin()}{\cos()}].
+| code:asin(x)
+2+a| Inherited from latexmath:[\mathrm{atan2}(x, sqrt(1.0 - x \times x))].
+| code:acos(x)
+2+a| Inherited from latexmath:[\mathrm{atan2}(sqrt(1.0 - x \times x), x)].
+| code:atan(), code:atan2()
+   | 4096 ULP                                                      | 5 ULP.
+| code:sinh(x)
+2+a| Inherited from latexmath:[(\exp(x) - \exp(-x)) \times 0.5].
+| code:cosh(x)
+2+a| Inherited from latexmath:[(\exp(x) + \exp(-x)) \times 0.5].
+| code:tanh()
+2+a| Inherited from latexmath:[\frac{\sinh()}{\cosh()}].
+| code:asinh(x)
+2+a| Inherited from latexmath:[\log(x + sqrt(x \times x + 1.0))].
+| code:acosh(x)
+2+a| Inherited from latexmath:[\log(x + sqrt(x \times x - 1.0))].
+| code:atanh(x)
+2+a| Inherited from latexmath:[\log(\frac{1.0 + x}{1.0 - x}) \times 0.5].
+| code:frexp()
+2+| Correctly rounded.
+| code:ldexp()
+2+| Correctly rounded.
+| code:length(x)
+2+a| Inherited from latexmath:[sqrt(dot(x, x))].
+| code:distance(x, y)
+2+a| Inherited from latexmath:[length(x - y)].
+| code:cross()
+2+| Inherited from [eq]#code:OpFSub(code:OpFMul, code:OpFMul)#.
+| code:normalize(x)
+2+a| Inherited from latexmath:[\frac{x}{length(x)}].
+| code:faceforward(N, I, NRef)
+2+| Inherited from [eq]#code:dot(NRef, I) < 0.0 ? N : -N#.
+| code:reflect(x, y)
+2+| Inherited from [eq]#x - 2.0 {times} code:dot(y, x) {times} y#.
+| code:refract(I, N, eta)
+2+| Inherited from [eq]#k < 0.0 ? 0.0 : eta {times} I - (eta {times} code:dot(N, I) {plus} code:sqrt(k)) {times} N#, where [eq]#k = 1 - eta {times} eta {times} (1.0 - code:dot(N, I) {times} code:dot(N, I))#.
+| code:round
+2+| Correctly rounded.
+| code:roundEven
+2+| Correctly rounded.
+| code:trunc
+2+| Correctly rounded.
+| code:fabs
+2+| Correctly rounded.
+| code:fsign
+2+| Correctly rounded.
+| code:floor
+2+| Correctly rounded.
+| code:ceil
+2+| Correctly rounded.
+| code:fract
+2+| Correctly rounded.
+| code:modf
+2+| Correctly rounded.
+| code:fmin
+2+| Correctly rounded.
+| code:fmax
+2+| Correctly rounded.
+| code:fclamp
+2+| Correctly rounded.
+| code:fmix(x, y, a)
+2+a| Inherited from latexmath:[x \times (1.0 - a) + y \times a].
+| code:step
+2+| Correctly rounded.
+| code:smoothStep(edge0, edge1, x)
+2+a| Inherited from latexmath:[t \times t \times (3.0 - 2.0 \times t)],
+where latexmath:[t = clamp(\frac{x - edge0}{edge1 - edge0}, 0.0, 1.0)].
+| code:nmin
+2+| Correctly rounded.
+| code:nmax
+2+| Correctly rounded.
+| code:nclamp
+2+| Correctly rounded.
+|====
+endif::VK_VERSION_1_2,VK_KHR_shader_float16_int8[]
+
+ifndef::VK_VERSION_1_2,VK_KHR_shader_float16_int8[]
+For single precision (32 bit) instructions, precisions are required: to be
+at least as follows, unless decorated with RelaxedPrecision:
+
+.Precision of core SPIR-V Instructions
+[options="header"]
+|====
+| Instruction                                                     | Precision
+| code:OpFAdd                                                     | Correctly rounded.
+| code:OpFSub                                                     | Correctly rounded.
+| code:OpFMul, code:OpVectorTimesScalar, code:OpMatrixTimesScalar | Correctly rounded.
+| code:OpFOrdEqual, code:OpFUnordEqual                            | Correct result.
+| code:OpFOrdLessThan, code:OpFUnordLessThan                      | Correct result.
+| code:OpFOrdGreaterThan, code:OpFUnordGreaterThan                | Correct result.
+| code:OpFOrdLessThanEqual, code:OpFUnordLessThanEqual            | Correct result.
+| code:OpFOrdGreaterThanEqual, code:OpFUnordGreaterThanEqual      | Correct result.
+| code:OpFDiv(x,y)                                                | 2.5 ULP for [eq]#{vert}y{vert}# in the range [2^-126^, 2^126^].
+| conversions between types                                       | Correctly rounded.
+|====
+
+.Precision of GLSL.std.450 Instructions
+[options="header"]
+|====
+|Instruction                 | Precision
+| code:fma()                 | Inherited from code:OpFMul followed by code:OpFAdd.
+| code:exp(x),  code:exp2(x) | [eq]#3 {plus} 2 {times} {vert}x{vert}# ULP.
+| code:log(),  code:log2()   | 3 ULP outside the range [eq]#[0.5, 2.0]#. Absolute error < [eq]#2^-21^# inside the range [eq]#[0.5, 2.0]#.
+| code:pow(x, y)             | Inherited from code:exp2(y {times} code:log2(x)).
+| code:sqrt()                | Inherited from 1.0 / code:inversesqrt().
+| code:inversesqrt()         | 2 ULP.
+|====
+endif::VK_VERSION_1_2,VK_KHR_shader_float16_int8[]
+
+GLSL.std.450 extended instructions specifically defined in terms of the
+above instructions inherit the above errors.
+GLSL.std.450 extended instructions not listed above and not defined in terms
+of the above have undefined: precision.
+
+For the code:OpSRem and code:OpSMod instructions, if either operand is
+negative the result is undefined:.
+
+[NOTE]
+.Note
+====
+While the code:OpSRem and code:OpSMod instructions are supported by the
+Vulkan environment, they require non-negative values and thus do not enable
+additional functionality beyond what code:OpUMod provides.
+====
+
+ifdef::VK_NV_cooperative_matrix[]
+code:OpCooperativeMatrixMulAddNV performs its operations in an
+implementation-dependent order and internal precision.
+endif::VK_NV_cooperative_matrix[]
+
+[[spirvenv-image-formats]]
+== Compatibility Between SPIR-V Image Formats And Vulkan Formats
+
+Images which are read from or written to by shaders must: have SPIR-V image
+formats compatible with the Vulkan image formats backing the image under the
+circumstances described for <<textures-operation-validation,texture image
+validation>>.
+The compatibile formats are:
+
+.SPIR-V and Vulkan Image Format Compatibility
+[cols="2*", options="header"]
+|====
+|SPIR-V Image Format    |Compatible Vulkan Format
+|code:Rgba32f           |ename:VK_FORMAT_R32G32B32A32_SFLOAT
+|code:Rgba16f           |ename:VK_FORMAT_R16G16B16A16_SFLOAT
+|code:R32f              |ename:VK_FORMAT_R32_SFLOAT
+|code:Rgba8             |ename:VK_FORMAT_R8G8B8A8_UNORM
+|code:Rgba8Snorm        |ename:VK_FORMAT_R8G8B8A8_SNORM
+|code:Rg32f             |ename:VK_FORMAT_R32G32_SFLOAT
+|code:Rg16f             |ename:VK_FORMAT_R16G16_SFLOAT
+|code:R11fG11fB10f      |ename:VK_FORMAT_B10G11R11_UFLOAT_PACK32
+|code:R16f              |ename:VK_FORMAT_R16_SFLOAT
+|code:Rgba16            |ename:VK_FORMAT_R16G16B16A16_UNORM
+|code:Rgb10A2           |ename:VK_FORMAT_A2B10G10R10_UNORM_PACK32
+|code:Rg16              |ename:VK_FORMAT_R16G16_UNORM
+|code:Rg8               |ename:VK_FORMAT_R8G8_UNORM
+|code:R16               |ename:VK_FORMAT_R16_UNORM
+|code:R8                |ename:VK_FORMAT_R8_UNORM
+|code:Rgba16Snorm       |ename:VK_FORMAT_R16G16B16A16_SNORM
+|code:Rg16Snorm         |ename:VK_FORMAT_R16G16_SNORM
+|code:Rg8Snorm          |ename:VK_FORMAT_R8G8_SNORM
+|code:R16Snorm          |ename:VK_FORMAT_R16_SNORM
+|code:R8Snorm           |ename:VK_FORMAT_R8_SNORM
+|code:Rgba32i           |ename:VK_FORMAT_R32G32B32A32_SINT
+|code:Rgba16i           |ename:VK_FORMAT_R16G16B16A16_SINT
+|code:Rgba8i            |ename:VK_FORMAT_R8G8B8A8_SINT
+|code:R32i              |ename:VK_FORMAT_R32_SINT
+|code:Rg32i             |ename:VK_FORMAT_R32G32_SINT
+|code:Rg16i             |ename:VK_FORMAT_R16G16_SINT
+|code:Rg8i              |ename:VK_FORMAT_R8G8_SINT
+|code:R16i              |ename:VK_FORMAT_R16_SINT
+|code:R8i               |ename:VK_FORMAT_R8_SINT
+|code:Rgba32ui          |ename:VK_FORMAT_R32G32B32A32_UINT
+|code:Rgba16ui          |ename:VK_FORMAT_R16G16B16A16_UINT
+|code:Rgba8ui           |ename:VK_FORMAT_R8G8B8A8_UINT
+|code:R32ui             |ename:VK_FORMAT_R32_UINT
+|code:Rgb10a2ui         |ename:VK_FORMAT_A2B10G10R10_UINT_PACK32
+|code:Rg32ui            |ename:VK_FORMAT_R32G32_UINT
+|code:Rg16ui            |ename:VK_FORMAT_R16G16_UINT
+|code:Rg8ui             |ename:VK_FORMAT_R8G8_UINT
+|code:R16ui             |ename:VK_FORMAT_R16_UINT
+|code:R8ui              |ename:VK_FORMAT_R8_UINT
+|====

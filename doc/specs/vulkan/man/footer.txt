@@ -1,7 +1,0 @@
-ifdef::doctype-manpage[]
-include::khronoscopyright.txt[]
-endif::doctype-manpage[]
-
-ifndef::doctype-manpage[]
-<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-endif::doctype-manpage[]

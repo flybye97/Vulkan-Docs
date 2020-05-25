@@ -1,0 +1,59 @@
+// Copyright (c) 2016-2020 Khronos Group. This work is licensed under a
+// Creative Commons Attribution 4.0 International License; see
+// http://creativecommons.org/licenses/by/4.0/
+
+include::{generated}/meta/{refprefix}VK_KHR_buffer_device_address.txt[]
+
+=== Other Extension Metadata
+
+*Last Modified Date*::
+    2019-06-24
+*IP Status*::
+    No known IP claims.
+*Interactions and External Dependencies*::
+  - Promoted to Vulkan 1.2 Core
+*Contributors*::
+  - Jeff Bolz, NVIDIA
+  - Neil Henning, AMD
+  - Tobias Hector, AMD
+  - Jason Ekstrand, Intel
+  - Baldur Karlsson, Valve
+  - Jan-Harald Fredriksen, Arm
+
+=== Description
+
+This extension allows the application to query a 64-bit buffer device
+address value for a buffer, which can be used to access the buffer memory
+via the code:PhysicalStorageBuffer storage class in the
+https://github.com/KhronosGroup/GLSL/blob/master/extensions/ext/GLSL_EXT_buffer_reference.txt[`GL_EXT_buffer_reference`]
+GLSL extension and
+{spirv}/KHR/SPV_KHR_physical_storage_buffer.html[`SPV_KHR_physical_storage_buffer`]
+SPIR-V extension.
+
+This extension also allows opaque addresses for buffers and memory objects
+to be queried and later supplied by a trace capture and replay tool, so that
+addresses used at replay time match the addresses used when the trace was
+captured.
+To enable tools to insert these queries, new memory allocation flags must be
+specified for memory objects that will be bound to buffers accessed via the
+code:PhysicalStorageBuffer storage class.
+
+=== Promotion to Vulkan 1.2
+
+All functionality in this extension is included in core Vulkan 1.2, with the
+KHR suffix omitted.
+However, if Vulkan 1.2 is supported and this extension is not, the
+code:bufferDeviceAddress capability is optional.
+The original type, enum and command names are still available as aliases of
+the core functionality.
+
+include::{generated}/interfaces/VK_KHR_buffer_device_address.txt[]
+
+=== New SPIR-V Capabilities
+
+  * <<spirvenv-capabilities-table-physicalstoragebufferaddresses,code:PhysicalStorageBufferAddresses>>
+
+=== Version History
+
+ * Revision 1, 2019-06-24 (Jan-Harald Fredriksen)
+   - Internal revisions based on VK_EXT_buffer_device_address
